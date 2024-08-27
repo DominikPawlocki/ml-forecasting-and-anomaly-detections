@@ -5,4 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>ml_ui</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="AutoMapper\Profiles.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="Radzen.Blazor" Version="5.1.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\ml-data\ml-data.csproj" />
+  </ItemGroup>
 </Project>

@@ -1,9 +1,126 @@
 ﻿@page "/"
+@using Radzen
+@using Radzen.Blazor
+@using ml_ui.ViewModels
+@inject WebSocketDataConnector DataProvider
 
 <PageTitle>Index</PageTitle>
 
-<h1>Hello, world!</h1>
+<RadzenStack class="rz-p-0 rz-p-md-6 rz-p-lg-12">
+    <h1>ANOMALY DETECTIONS</h1>
 
-Welcome to your new app.
+    <RadzenCard Variant="Variant.Outlined">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenCheckBox @bind-Value="@showDataLabels" Name="dataLabels"></RadzenCheckBox>
+                <RadzenLabel Text="Show Data Labels" Component="dataLabels" />
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenLabel Text="Nr of data" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="20" Max="700" @bind-Value=@howManyToGenerate Style="width: 200px;" />
+                <RadzenLabel Text="@howManyToGenerate.ToString()" Component="valueSlider" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+    <RadzenCard>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="RANDOM" /></h1>
+
+            <RadzenLabel Text="Upper bound" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="0" Max="10000000" @bind-Value=@randomUpperBound Style="width: 200px;" />
+            <RadzenLabel Text="@randomUpperBound.ToString()" Component="valueSlider" />
+
+            <RadzenLabel Text="Lower bound" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="-10000000" Max="0" @bind-Value=@lowerBound Style="width: 200px;" />
+            <RadzenLabel Text="@lowerBound.ToString()" Component="valueSlider" />
+
+
+            <RadzenLabel Text="Nr of discrepancies" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="0" Max="30" @bind-Value=@randomDiscrepanciesAmount Style="width: 200px;" />
+            <RadzenLabel Text="@randomDiscrepanciesAmount.ToString()" Component="valueSlider" />
+
+            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateNewRandomData)" Text="GO !" />
+
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <RadzenCard>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="LINEAR" /></h1>
+                <RadzenLabel Text="Linear discrepancy" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="0" Max="7" @bind-Value=@linearDiscrepancy Style="width: 200px;" />
+                <RadzenLabel Text="@linearDiscrepancy.ToString()" Component="valueSlider" />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateLinearData)" Text="GO !" />
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenCard>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="SINE" /></h1>
+                <RadzenLabel Text="Works best for bigger amount of data (eg 360)" Component="valueSlider" />
+                <RadzenLabel Text="Sinus discrepancy" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="3" Max="7" @bind-Value=@sinusDiscrepancy Style="width: 200px;" />
+                <RadzenLabel Text="@sinusDiscrepancy.ToString()" Component="valueSlider" />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateSinusData)" Text="GO !" />
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+
+    <RadzenChart>
+        <RadzenChartTooltipOptions Shared="true" />
+        <RadzenLineSeries Smooth="true" Data="@ViewModel.Data" CategoryProperty="Date" Title="Random" ValueProperty="Value">
+            @* <RadzenSeriesAnnotation Visible="true" TItem="DateIntegerDataViewModel" Data="@ViewModel.Data.Where(d=>d.IsAnomaly).FirstOrDefault()" OffsetY="-16" Text="Detection!" /> *@
+            <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
+            <RadzenSeriesDataLabels Visible="@showDataLabels" />
+        </RadzenLineSeries>
+        <RadzenLineSeries Smooth="true" Data="@ViewModel.DataWithAnomaliesDetected" CategoryProperty="Date" Title="Anomalies" ValueProperty="Value">
+            <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
+            <RadzenSeriesDataLabels Visible="true" />
+        </RadzenLineSeries>
+        <RadzenCategoryAxis Padding="20" />
+        <RadzenValueAxis>
+            <RadzenGridLines Visible="true" />
+            <RadzenAxisTitle Text="Value" />
+        </RadzenValueAxis>
+    </RadzenChart>
+</RadzenStack>
+
+<div>
+</div>
+
+
+@code {
+    private bool showDataLabels = false;
+    private int howManyToGenerate = 20;
+    private int randomUpperBound = 20;
+    private int lowerBound = -20;
+    private int randomDiscrepanciesAmount = 2;
+    private int linearDiscrepancy = 2;
+    private int sinusDiscrepancy = 3;
+    public AnomalyDetectionViewModel ViewModel = new AnomalyDetectionViewModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ViewModel.Data == null)
+            ViewModel.Data = await DataProvider.GetIntegerRandomData(howManyToGenerate, randomUpperBound, lowerBound, randomDiscrepanciesAmount);
+    }
+
+    private async Task GenerateNewRandomData()
+    {
+        ViewModel.Data = await DataProvider.GetIntegerRandomData(howManyToGenerate, randomUpperBound, lowerBound, randomDiscrepanciesAmount);
+        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+    }
+
+    private async Task GenerateLinearData()
+    {
+        ViewModel.Data = await DataProvider.GetLinearData(howManyToGenerate, linearDiscrepancy * 0.1f);
+        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+    }
+    private async Task GenerateSinusData()
+    {
+        ViewModel.Data = await DataProvider.GetSinusData(howManyToGenerate, randomUpperBound, sinusDiscrepancy * 0.1f);
+        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+    }
+}
