@@ -2,7 +2,7 @@
 using Microsoft.ML.Transforms.TimeSeries;
 using ml_data;
 
-namespace ml_engine
+namespace ml_engine.Forecasting
 {
     public interface IMlForecaster
     {
@@ -74,7 +74,7 @@ namespace ml_engine
             return TrainModel<T>(data, forecastChain);
         }
 
-        private Microsoft.ML.Transforms.TimeSeries.SsaForecastingEstimator GetForecastingPipeline(Enum detectionByColumnName,
+        private SsaForecastingEstimator GetForecastingPipeline(Enum detectionByColumnName,
                                                                                                   int windowSize,
                                                                                                   int seriesLength,
                                                                                                   int trainSize,

@@ -1,4 +1,4 @@
-﻿namespace ml_engine
+﻿namespace ml_engine.Forecasting
 {
     //Just a property name of the one in the model predicions go against
     public enum ForecastColumnName

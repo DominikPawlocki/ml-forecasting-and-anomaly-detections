@@ -1,6 +1,6 @@
 ﻿using Microsoft.ML.Data;
 
-namespace ml_engine
+namespace ml_engine.Forecasting
 {
     public class MlForecastResult
     {

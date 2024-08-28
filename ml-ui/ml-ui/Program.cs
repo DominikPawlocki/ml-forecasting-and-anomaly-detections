@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using ml_data;
 using ml_ui.Data;
-using ml_engine;
 using System.Reflection;
 using ml_ui.Services;
+using ml_engine.Forecasting;
 
 var builder = WebApplication.CreateBuilder(args);
 
