@@ -1,11 +1,12 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35219.272
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ml-ui", "ml-ui\ml-ui.csproj", "{D8F09746-36F7-4302-92F3-FFFB7FBB0E18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ml-data", "..\ml-data\ml-data.csproj", "{FB66928E-43CF-455B-8B9B-59FFF02B7ACC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ml-data", "..\ml-data\ml-data.csproj", "{FB66928E-43CF-455B-8B9B-59FFF02B7ACC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ml-engine", "..\ml-engine\ml-engine.csproj", "{11F13412-B10A-4416-8173-0EC0F7DB645D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +22,10 @@ Global
 		{FB66928E-43CF-455B-8B9B-59FFF02B7ACC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FB66928E-43CF-455B-8B9B-59FFF02B7ACC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FB66928E-43CF-455B-8B9B-59FFF02B7ACC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11F13412-B10A-4416-8173-0EC0F7DB645D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11F13412-B10A-4416-8173-0EC0F7DB645D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11F13412-B10A-4416-8173-0EC0F7DB645D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11F13412-B10A-4416-8173-0EC0F7DB645D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

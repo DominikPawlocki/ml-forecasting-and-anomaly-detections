@@ -1,14 +1,16 @@
-﻿@page "/"
+﻿@page "/forecasting"
 @using Radzen
 @using Radzen.Blazor
 @using ml_ui.Services
 @using ml_ui.ViewModels
 @inject WebSocketDataConnector DataProvider
+@inject IMlForecastingService MlForecaster
 
-<PageTitle>Index</PageTitle>
+
+<PageTitle>Forecasting</PageTitle>
 
 <RadzenStack class="rz-p-0 rz-p-md-6 rz-p-lg-12">
-    <h1>ANOMALY DETECTIONS</h1>
+    <h1>FORECASTING, PREDICTING</h1>
 
     <RadzenCard Variant="Variant.Outlined">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
@@ -41,7 +43,7 @@
             <RadzenSlider Name="valueSlider" Min="0" Max="30" @bind-Value=@randomDiscrepanciesAmount Style="width: 200px;" />
             <RadzenLabel Text="@randomDiscrepanciesAmount.ToString()" Component="valueSlider" />
 
-            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateNewRandomData)" Text="GO" />
+            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Small" Click="@(GenerateNewRandomData)" Text="GO" />
 
         </RadzenStack>
     </RadzenCard>
@@ -53,7 +55,7 @@
                 <RadzenLabel Text="Linear discrepancy" Component="valueSlider" />
                 <RadzenSlider Name="valueSlider" Min="0" Max="7" @bind-Value=@linearDiscrepancy Style="width: 200px;" />
                 <RadzenLabel Text="@linearDiscrepancy.ToString()" Component="valueSlider" />
-                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateLinearData)" Text="GO" />
+                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Small" Click="@(GenerateLinearData)" Text="GO" />
             </RadzenStack>
         </RadzenCard>
 
@@ -64,7 +66,7 @@
                 <RadzenLabel Text="Sinus discrepancy" Component="valueSlider" />
                 <RadzenSlider Name="valueSlider" Min="3" Max="7" @bind-Value=@sinusDiscrepancy Style="width: 200px;" />
                 <RadzenLabel Text="@sinusDiscrepancy.ToString()" Component="valueSlider" />
-                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateSinusData)" Text="GO" />
+                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Small" Click="@(GenerateSinusData)" Text="GO" />
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
@@ -76,7 +78,7 @@
             <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
             <RadzenSeriesDataLabels Visible="@showDataLabels" />
         </RadzenLineSeries>
-        <RadzenLineSeries Smooth="true" Data="@ViewModel.DataPointsDetectedAsAnomalies" CategoryProperty="Date" Title="Anomalies" ValueProperty="Value">
+        <RadzenLineSeries Smooth="true" Data="@ViewModel.DataPointsPredicted" CategoryProperty="Date" Title="Forecasts" ValueProperty="Value">
             <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
             <RadzenSeriesDataLabels Visible="true" />
         </RadzenLineSeries>
@@ -86,25 +88,36 @@
         </RadzenValueAxis>
     </RadzenChart>
 
+
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
         <RadzenCard>
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect Anomalies" /></h1>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
+                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Predict future" /></h1>
+                <RadzenCard>
+                    <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="0.5rem">
+                        <RadzenLabel Text="Window size" Component="valueSlider" />
+                        @* 'The input size for training should be greater than twice the window size.' *@
+                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.WindowSize" Change="@((int a)=>ViewModel.windowSizeOnChange(a))" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.WindowSize.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Series lenght" Component="valueSlider" />
+                        @* 'The series length should be greater than the window size.' *@
+                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.SeriesLenght" Change="@((int a)=>ViewModel.seriesLenghtOnChange(a))" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.SeriesLenght.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Train size" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.TrainSize" Change="@((int a)=>ViewModel.trainSizeOnChange(a))" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.TrainSize.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Style="max-width: 350px" Text="There are more parameters like: 'isAdaptive', 'shouldStabilize', 'discountFactor', 'rank' etc... Please read Microsoft docs " />
+                    </RadzenStack>
+                </RadzenCard>
+
                 <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="90" Max="95" @bind-Value=@detectionConfidenceLevel Style="width: 200px;" />
-                <RadzenLabel Text="@detectionConfidenceLevel.ToString()" Component="valueSlider" />
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Detect)" Text="DETECT !" />
-            </RadzenStack>
-        </RadzenCard>
-    </RadzenStack>
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-        <RadzenCard>
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect ChangePoints" /></h1>
-                <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="90" Max="95" @bind-Value=@detectionConfidenceLevel Style="width: 200px;" />
-                <RadzenLabel Text="@detectionConfidenceLevel.ToString()" Component="valueSlider" />
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Detect)" Text="DETECT !" />
+                <RadzenSlider Name="valueSlider" Min="1" Max="7" @bind-Value=@howManyFutureWeeksToPredict Style="width: 200px;" />
+                <RadzenLabel Text="@howManyFutureWeeksToPredict.ToString()" Component="valueSlider" />
+
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Predict)" Text="PREDICT !" />
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
@@ -122,35 +135,40 @@
     private int randomDiscrepanciesAmount = 2;
     private int linearDiscrepancy = 2;
     private int sinusDiscrepancy = 3;
-    private int detectionConfidenceLevel = 98;
-    public AnomalyDetectionViewModel ViewModel = new AnomalyDetectionViewModel();
+    private int howManyFutureWeeksToPredict = 2;
+
+    public ForecastingViewModel ViewModel = new ForecastingViewModel() { Data = new List<DateIntegerDataViewModel>(0) };
 
     protected override async Task OnInitializedAsync()
     {
-        if (ViewModel.Data == null)
-            ViewModel.Data = await DataProvider.GetIntegerRandomData(howManyToGenerate, randomUpperBound, lowerBound, randomDiscrepanciesAmount);
+        if (ViewModel.Data == null || !ViewModel.Data.Any())
+        {
+            await GenerateNewRandomData();
+        }
     }
 
     private async Task GenerateNewRandomData()
     {
         ViewModel.Data = await DataProvider.GetIntegerRandomData(howManyToGenerate, randomUpperBound, lowerBound, randomDiscrepanciesAmount);
-        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+        ViewModel.SetUpDefaults();
     }
 
     private async Task GenerateLinearData()
     {
         ViewModel.Data = await DataProvider.GetLinearData(howManyToGenerate, linearDiscrepancy * 0.1f);
-        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+        ViewModel.SetUpDefaults();
+
     }
 
     private async Task GenerateSinusData()
     {
         ViewModel.Data = await DataProvider.GetSinusData(howManyToGenerate, randomUpperBound, sinusDiscrepancy * 0.1f);
-        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+        ViewModel.SetUpDefaults();
     }
 
-    private async Task Detect()
+    private async Task Predict()
     {
-        //ViewModel.DataPointsPredicted = await MlForecaster.Forecast(howManyFutureWeeksToPredict, ViewModel.Data);
+        ViewModel.DataPointsPredicted = await MlForecaster.Forecast(howManyFutureWeeksToPredict, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
     }
+ 
 }

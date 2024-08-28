@@ -1,25 +1,8 @@
-﻿using static System.Runtime.InteropServices.JavaScript.JSType;
-
-namespace ml_ui.ViewModels
+﻿namespace ml_ui.ViewModels
 {
-    public class AnomalyDetectionViewModel : PropertyChangedNotifier
+    public class AnomalyDetectionViewModel : ViewModelBase
     {
-        private IEnumerable<DateIntegerDataViewModel> _data;
-
-        public IEnumerable<DateIntegerDataViewModel> Data
-        {
-            get { return _data; }
-            set
-            {
-                if (_data != value)
-                {
-                    _data = value;
-                    NotifyPropertyChanged(nameof(this.Data));
-                }
-            }
-        }
-
-        public IEnumerable<DateIntegerDataViewModel> DataWithAnomaliesDetected
+        public IEnumerable<DateIntegerDataViewModel> DataPointsDetectedAsAnomalies
         {
             get { return _data != null ? _data.Where(d => d.IsAnomaly) : []; }
         }

@@ -2,7 +2,7 @@
 using ml_data;
 using ml_ui.ViewModels;
 
-namespace ml_ui
+namespace ml_ui.Services
 {
     public class WebSocketDataConnector(IDataGenerator provider, IMapper mapper)
     {

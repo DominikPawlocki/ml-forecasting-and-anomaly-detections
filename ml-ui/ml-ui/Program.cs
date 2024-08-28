@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using ml_data;
-using ml_ui;
 using ml_ui.Data;
+using ml_engine;
 using System.Reflection;
+using ml_ui.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,8 @@ builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddSingleton<IDataGenerator, DataGenerator>();
 builder.Services.AddSingleton<WebSocketDataConnector>();
+builder.Services.AddSingleton<IMlForecaster, Forecaster>();
+builder.Services.AddSingleton<IMlForecastingService, MlForecastingService>();
 
 var app = builder.Build();
 

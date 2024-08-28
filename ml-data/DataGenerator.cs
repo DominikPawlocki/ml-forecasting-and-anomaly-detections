@@ -36,7 +36,7 @@
             for (int i = 0; i < randomDiscrepanciesAmount; i++)
             {
                 var index = new Random().Next(0, howMany - 1);
-                data[index] = (new DateData(data[index].Date, data[index].Value * 5)); //howBigDiscrepancyIs - lets say fixed 5 times
+                data[index] = (new DateData(data[index].Date, data[index].Value * 8)); //howBigDiscrepancyIs - lets say fixed 8 times more
             }
             return data;
         }
@@ -98,5 +98,9 @@
     {
         public DateTime Date { get; } = d;
         public int Value { get; } = v;
+        public float ValueForMl
+        {
+            get { return (float)Value; }
+        }
     }
 }
