@@ -1,40 +1,40 @@
 ﻿using Microsoft.ML.Transforms.TimeSeries;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using ml_data;
 
 namespace ml_engine.AnomalyDetections
 {
-    interface ISpikesDetector
+    public interface ISpikesDetector
     {
         IEnumerable<SpikesDetectedVector> GetSpikesByIid<T>(int pvalueHistoryLength,
                                                             int confidence,
-                                                            IDataView untrainedModel,
+                                                            IEnumerable<DateData> data,
                                                             string detectionByColumnName,
-                                                            AnomalySide side) where T : class, new();
+                                                            AnomalySide side) where T : class;
         IEnumerable<SpikesDetectedVector> GetSpikesBySsa<T>(int pvalueHistoryLength,
                                                             int trainingWindowSize,
                                                             int seasonalityWindowSize,
                                                             int confidence,
-                                                            IDataView untrainedModel,
+                                                            IEnumerable<DateData> data,
                                                             string detectionByColumnName,
-                                                            AnomalySide side) where T : class, new();
+                                                            AnomalySide side) where T : class;
     }
 
-    internal class SpikesDetector : BaseForAllDetectors, ISpikesDetector
+    public class SpikesDetector : BaseForAllDetectors, ISpikesDetector
     {
-        public SpikesDetector(MLContext machineLearningContext) : base(machineLearningContext)
-        {
-        }
-
         public IEnumerable<SpikesDetectedVector> GetSpikesByIid<T>(int pvalueHistoryLength,
                                                                    int confidence,
-                                                                   IDataView untrainedModel,
+                                                                   IEnumerable<DateData> data,
                                                                    string detectionByColumnName,
-                                                                   AnomalySide side = AnomalySide.TwoSided) where T : class, new()
+                                                                   AnomalySide side = AnomalySide.TwoSided) where T : class
         {
+            var orderedData = data.OrderBy(d => d.Date).ToList();
+            var dataView = MlContext.Data.LoadFromEnumerable(orderedData);
+
             var estimatorChain = GetIidSpikesEstimator(pvalueHistoryLength, confidence, detectionByColumnName, side);
 
-            var resultData = TransformModel<T>(untrainedModel, estimatorChain);
+            var resultData = TransformModel<T>(dataView, estimatorChain);
             var spikesDetected = GetSpikes(resultData);
 
             return spikesDetected;
@@ -44,10 +44,13 @@ namespace ml_engine.AnomalyDetections
                                                                    int trainingWindowSize,
                                                                    int seasonalityWindowSize,
                                                                    int confidence,
-                                                                   IDataView untrainedModel,
+                                                                   IEnumerable<DateData> data,
                                                                    string detectionByColumnName,
-                                                                   AnomalySide side = AnomalySide.TwoSided) where T : class, new()
+                                                                   AnomalySide side = AnomalySide.TwoSided) where T : class
         {
+            var orderedData = data.OrderBy(d => d.Date).ToList();
+            var dataView = MlContext.Data.LoadFromEnumerable(orderedData);
+
             var estimatorChain = GetSsaSpikesEstimator(pvalueHistoryLength,
                                                        trainingWindowSize,
                                                        seasonalityWindowSize,
@@ -55,15 +58,16 @@ namespace ml_engine.AnomalyDetections
                                                        detectionByColumnName,
                                                        side);
 
-            var resultData = TransformModel<T>(untrainedModel, estimatorChain);
+            var resultData = TransformModel<T>(dataView, estimatorChain);
             var spikesDetected = GetSpikes(resultData);
 
             return spikesDetected;
         }
 
-        private EstimatorChain<ITransformer> GetIidSpikesEstimator(int pvalHstLenght, int confidence,
-                                                          string detectionByColumnName,
-                                                          AnomalySide side = AnomalySide.TwoSided)
+        private EstimatorChain<ITransformer> GetIidSpikesEstimator(int pvalHstLenght,
+                                                                   int confidence,
+                                                                   string detectionByColumnName,
+                                                                   AnomalySide side = AnomalySide.TwoSided)
         {
             Console.WriteLine($"=============== Detect spikes with pattern IId ===============");
             var estimatorChain = new EstimatorChain<ITransformer>();
@@ -83,9 +87,10 @@ namespace ml_engine.AnomalyDetections
             return estimatorChain.Append(estimator: CreateSsaSpikeEstimator(pvalHstLenght, tWinSize, sWinSize, confidence, detectionByColumnName, side));
         }
 
-        private IEstimator<ITransformer> CreateIidSpikeEstimator(int pvalHstLenght, double confidence,
-                                                         string inputColumnName,
-                                                         AnomalySide side = AnomalySide.TwoSided)
+        private IEstimator<ITransformer> CreateIidSpikeEstimator(int pvalHstLenght,
+                                                                 double confidence,
+                                                                 string inputColumnName,
+                                                                 AnomalySide side = AnomalySide.TwoSided)
         {
             return MlContext.Transforms.DetectIidSpike(
                     outputColumnName: nameof(SpikesDetectedVector.Prediction),
@@ -107,10 +112,10 @@ namespace ml_engine.AnomalyDetections
                                                         inputColumnName: inputColumnName,
                                                         confidence: confidence,
                                                         pvalueHistoryLength: pvalHstLenght,
-                                                        // The number of points from the beginning of the sequence used for training. For our weekly data, lets take 4 weeks of data so 4 x 7
+                                                        // The number of points from the beginning of the sequence used for training
                                                         trainingWindowSize: tWinSize,
                                                         // https://docs.microsoft.com/en-us/dotnet/api/microsoft.ml.timeseriescatalog.detectspikebyssa?view=ml-dotnet
-                                                        // . Its weekly data, so 7 + 1 here. +1 I found in MS examples...
+                                                        // An upper bound on the largest relevant seasonality in the input time-series.
                                                         seasonalityWindowSize: sWinSize,
                                                         side: side);
         }
@@ -121,5 +126,6 @@ namespace ml_engine.AnomalyDetections
             var spikesDetected = MlContext.Data.CreateEnumerable<SpikesDetectedVector>(resultData, reuseRowObject: false);
             return spikesDetected;
         }
+
     }
 }

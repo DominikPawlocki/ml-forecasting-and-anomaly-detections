@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ml_engine.AnomalyDetections
 {
-    interface IChangePointsDetector
+    public interface IChangePointsDetector
     {
         IEnumerable<SpikesDetectedVector> GetChangePoints<T>(IDataView data,
                                                              DetectionMethod numericMethod,
@@ -23,12 +23,8 @@ namespace ml_engine.AnomalyDetections
                                                              double eps = 0.1) where T : class, new();
     }
 
-    internal class ChangePointsDetector : BaseForAllDetectors, IChangePointsDetector
+    public class ChangePointsDetector : BaseForAllDetectors, IChangePointsDetector
     {
-        public ChangePointsDetector(MLContext machineLearningContext) : base(machineLearningContext)
-        {
-        }
-
         public IEnumerable<SpikesDetectedVector> GetChangePoints<T>(IDataView data,
                                            DetectionMethod numericMethod,
                                            string inputColumnName,

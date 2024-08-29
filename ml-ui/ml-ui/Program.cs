@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using ml_data;
 using ml_ui.Data;
 using System.Reflection;
 using ml_ui.Services;
 using ml_engine.Forecasting;
+using ml_engine.AnomalyDetections;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +16,12 @@ builder.Services.AddSingleton<IDataGenerator, DataGenerator>();
 builder.Services.AddSingleton<WebSocketDataConnector>();
 builder.Services.AddSingleton<IMlForecaster, Forecaster>();
 builder.Services.AddSingleton<IMlForecastingService, MlForecastingService>();
+//builder.Services.AddSingleton(typeof(MLContext));
+builder.Services.AddSingleton<ISpikesDetector, SpikesDetector>();
+builder.Services.AddSingleton<IAnomalyDetector, AnomalyDetector>();
+builder.Services.AddSingleton<IChangePointsDetector, ChangePointsDetector>();
+builder.Services.AddSingleton<IMlDataAnomaliesDetectingService, MlDataAnomaliesDetectingService>();
+
 
 var app = builder.Build();
 

@@ -6,7 +6,6 @@ namespace ml_ui.ViewModels
     {
         private DateTime _date;
         private int _val;
-        private bool _isAnomaly;
 
         public DateTime Date
         {
@@ -22,8 +21,6 @@ namespace ml_ui.ViewModels
         }
 
         public int Value { get => _val; set => _val = value; }
-
-        public bool IsAnomaly { get => _isAnomaly; set => _isAnomaly = value; }
     }
 
     public class DateIntegerForecasterDataViewModel : DateIntegerDataViewModel
@@ -33,4 +30,23 @@ namespace ml_ui.ViewModels
         [VectorType(3)]
         public float ConfidenceUpperBound { get; set; }
     }
+
+    /// <summary>
+    /// An output VM
+    /// Vector of System.Double goes out from ML library. Each Prediction in `predictions` returns back a vector containing three values:
+    /// 0 = Alert(0 for no alert, 1 for an alert)
+    /// 1 = Score(value where the anomaly is detected e.g.number of sales)
+    /// 2 = P-value(value used to measure how likely an anomaly is to be true vs.background noise).
+    /// P-value is a metric between zero and one. The lower the value, the larger the probability that we’re looking at a spike.
+    /// </summary>
+    public class SpikeDetectionDataViewModel : DateIntegerDataViewModel
+    {
+        public bool IsAlert { get; set; }
+        public double ScoreOriginal { get; set; }
+
+        public new int Value { get { return (int)ScoreOriginal; } }
+        public double PValue { get; set; }
+    }
+
+
 }

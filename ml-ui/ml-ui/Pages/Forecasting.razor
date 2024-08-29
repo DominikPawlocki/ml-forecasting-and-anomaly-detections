@@ -15,13 +15,13 @@
     <RadzenCard Variant="Variant.Outlined">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <RadzenCheckBox @bind-Value="@showDataLabels" Name="dataLabels"></RadzenCheckBox>
+                <RadzenCheckBox @bind-Value="@ViewModel.ShowDataLabels" Name="dataLabels"></RadzenCheckBox>
                 <RadzenLabel Text="Show Data Labels" Component="dataLabels" />
             </RadzenStack>
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                 <RadzenLabel Text="Nr of data" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="20" Max="700" @bind-Value=@howManyToGenerate Style="width: 200px;" />
-                <RadzenLabel Text="@howManyToGenerate.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="20" Max="700" @bind-Value=@ViewModel.HowManyToGenerate Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.HowManyToGenerate.ToString()" Component="valueSlider" />
             </RadzenStack>
         </RadzenStack>
     </RadzenCard>
@@ -31,17 +31,17 @@
             <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="RANDOM" /></h1>
 
             <RadzenLabel Text="Upper bound" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="0" Max="10000000" @bind-Value=@randomUpperBound Style="width: 200px;" />
-            <RadzenLabel Text="@randomUpperBound.ToString()" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="0" Max="10000000" @bind-Value=@ViewModel.RandomUpperBound Style="width: 200px;" />
+            <RadzenLabel Text="@ViewModel.RandomUpperBound.ToString()" Component="valueSlider" />
 
             <RadzenLabel Text="Lower bound" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="-10000000" Max="0" @bind-Value=@lowerBound Style="width: 200px;" />
-            <RadzenLabel Text="@lowerBound.ToString()" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="-10000000" Max="0" @bind-Value=@ViewModel.RandomLowerBound Style="width: 200px;" />
+            <RadzenLabel Text="@ViewModel.RandomLowerBound.ToString()" Component="valueSlider" />
 
 
             <RadzenLabel Text="Nr of discrepancies" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="0" Max="30" @bind-Value=@randomDiscrepanciesAmount Style="width: 200px;" />
-            <RadzenLabel Text="@randomDiscrepanciesAmount.ToString()" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="0" Max="30" @bind-Value=@ViewModel.RandomDiscrepanciesAmount Style="width: 200px;" />
+            <RadzenLabel Text="@ViewModel.RandomDiscrepanciesAmount.ToString()" Component="valueSlider" />
 
             <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Small" Click="@(GenerateNewRandomData)" Text="GO" />
 
@@ -53,8 +53,8 @@
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                 <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="LINEAR" /></h1>
                 <RadzenLabel Text="Linear discrepancy" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="0" Max="7" @bind-Value=@linearDiscrepancy Style="width: 200px;" />
-                <RadzenLabel Text="@linearDiscrepancy.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="0" Max="7" @bind-Value=@ViewModel.LinearDiscrepancy Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.LinearDiscrepancy.ToString()" Component="valueSlider" />
                 <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Small" Click="@(GenerateLinearData)" Text="GO" />
             </RadzenStack>
         </RadzenCard>
@@ -64,8 +64,8 @@
                 <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="SINE" /></h1>
                 <RadzenLabel Text="Works best for bigger amount of data (eg 360)" Component="valueSlider" />
                 <RadzenLabel Text="Sinus discrepancy" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="3" Max="7" @bind-Value=@sinusDiscrepancy Style="width: 200px;" />
-                <RadzenLabel Text="@sinusDiscrepancy.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="3" Max="7" @bind-Value=@ViewModel.SinusDiscrepancy Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.SinusDiscrepancy.ToString()" Component="valueSlider" />
                 <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Small" Click="@(GenerateSinusData)" Text="GO" />
             </RadzenStack>
         </RadzenCard>
@@ -76,7 +76,7 @@
         <RadzenLineSeries Smooth="true" Data="@ViewModel.Data" CategoryProperty="Date" Title="Dataset" ValueProperty="Value">
             @* <RadzenSeriesAnnotation Visible="true" TItem="DateIntegerDataViewModel" Data="@ViewModel.Data.Where(d=>d.IsAnomaly).FirstOrDefault()" OffsetY="-16" Text="Detection!" /> *@
             <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
-            <RadzenSeriesDataLabels Visible="@showDataLabels" />
+            <RadzenSeriesDataLabels Visible="@ViewModel.ShowDataLabels" />
         </RadzenLineSeries>
         <RadzenLineSeries Smooth="true" Data="@ViewModel.DataPointsPredicted" CategoryProperty="Date" Title="Forecasts" ValueProperty="Value">
             <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
@@ -128,13 +128,6 @@
 
 
 @code {
-    private bool showDataLabels = false;
-    private int howManyToGenerate = 20;
-    private int randomUpperBound = 20;
-    private int lowerBound = -20;
-    private int randomDiscrepanciesAmount = 2;
-    private int linearDiscrepancy = 2;
-    private int sinusDiscrepancy = 3;
     private int howManyFutureWeeksToPredict = 2;
 
     public ForecastingViewModel ViewModel = new ForecastingViewModel() { Data = new List<DateIntegerDataViewModel>(0) };
@@ -149,20 +142,20 @@
 
     private async Task GenerateNewRandomData()
     {
-        ViewModel.Data = await DataProvider.GetIntegerRandomData(howManyToGenerate, randomUpperBound, lowerBound, randomDiscrepanciesAmount);
+        ViewModel.Data = await DataProvider.GetIntegerRandomData(ViewModel.HowManyToGenerate, ViewModel.RandomUpperBound, ViewModel.RandomLowerBound, ViewModel.RandomDiscrepanciesAmount);
         ViewModel.SetUpDefaults();
     }
 
     private async Task GenerateLinearData()
     {
-        ViewModel.Data = await DataProvider.GetLinearData(howManyToGenerate, linearDiscrepancy * 0.1f);
+        ViewModel.Data = await DataProvider.GetLinearData(ViewModel.HowManyToGenerate, ViewModel.LinearDiscrepancy * 0.1f);
         ViewModel.SetUpDefaults();
 
     }
 
     private async Task GenerateSinusData()
     {
-        ViewModel.Data = await DataProvider.GetSinusData(howManyToGenerate, randomUpperBound, sinusDiscrepancy * 0.1f);
+        ViewModel.Data = await DataProvider.GetSinusData(ViewModel.HowManyToGenerate, ViewModel.RandomUpperBound, ViewModel.SinusDiscrepancy * 0.1f);
         ViewModel.SetUpDefaults();
     }
 
@@ -170,5 +163,5 @@
     {
         ViewModel.DataPointsPredicted = await MlForecaster.Forecast(howManyFutureWeeksToPredict, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
     }
- 
+
 }

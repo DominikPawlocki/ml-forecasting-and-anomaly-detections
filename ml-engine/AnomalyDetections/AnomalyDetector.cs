@@ -31,13 +31,6 @@ namespace ml_engine.AnomalyDetections
 
     public class AnomalyDetector : BaseForAllDetectors, IAnomalyDetector
     {
-
-        public AnomalyDetector(MLContext machineLearningContext) : base(machineLearningContext)
-        {
-        }
-
-
-
         public IEnumerable<AnomalyDetectedVector> GetAnomalies<T>(string detectionByColumnName,
                                                                   IDataView untrainedModel,
                                                                   double threshold,
@@ -77,10 +70,10 @@ namespace ml_engine.AnomalyDetections
             {
                 Threshold = threshold,
                 Sensitivity = sensitivity,
-                DetectMode = (SrCnnDetectMode)detectMode, // Enum.Parse<SrCnnDetectMode>(detectMode.ToString(), true),
+                DetectMode = (Microsoft.ML.TimeSeries.SrCnnDetectMode)detectMode, // Enum.Parse<SrCnnDetectMode>(detectMode.ToString(), true),
                 Period = period.GetValueOrDefault(),
                 BatchSize = batchSize,
-                DeseasonalityMode = deseasonalityMode
+                DeseasonalityMode = (Microsoft.ML.TimeSeries.SrCnnDeseasonalityMode)deseasonalityMode
             };
 
             //STEP 4: Invoke SrCnn algorithm to detect anomaly on the entire series.

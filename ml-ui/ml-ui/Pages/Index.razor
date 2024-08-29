@@ -3,23 +3,30 @@
 @using Radzen.Blazor
 @using ml_ui.Services
 @using ml_ui.ViewModels
+@using ml_engine.AnomalyDetections
 @inject WebSocketDataConnector DataProvider
+@inject IMlDataAnomaliesDetectingService MlSpikesAnomaliesChangePointsDetector
+
 
 <PageTitle>Index</PageTitle>
 
 <RadzenStack class="rz-p-0 rz-p-md-6 rz-p-lg-12">
     <h1>ANOMALY DETECTIONS</h1>
-
+    <div>
+        <h3>
+            <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text=@ViewModel.ErrorOccuredText Visible=@ViewModel.ShowError />
+        </h3>
+    </div>
     <RadzenCard Variant="Variant.Outlined">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <RadzenCheckBox @bind-Value="@showDataLabels" Name="dataLabels"></RadzenCheckBox>
+                <RadzenCheckBox @bind-Value="@ViewModel.ShowDataLabels" Name="dataLabels"></RadzenCheckBox>
                 <RadzenLabel Text="Show Data Labels" Component="dataLabels" />
             </RadzenStack>
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                 <RadzenLabel Text="Nr of data" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="20" Max="700" @bind-Value=@howManyToGenerate Style="width: 200px;" />
-                <RadzenLabel Text="@howManyToGenerate.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="20" Max="700" @bind-Value=@ViewModel.HowManyToGenerate Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.HowManyToGenerate.ToString()" Component="valueSlider" />
             </RadzenStack>
         </RadzenStack>
     </RadzenCard>
@@ -29,17 +36,17 @@
             <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="RANDOM" /></h1>
 
             <RadzenLabel Text="Upper bound" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="0" Max="10000000" @bind-Value=@randomUpperBound Style="width: 200px;" />
-            <RadzenLabel Text="@randomUpperBound.ToString()" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="0" Max="10000000" @bind-Value=@ViewModel.RandomUpperBound Style="width: 200px;" />
+            <RadzenLabel Text="@ViewModel.RandomUpperBound.ToString()" Component="valueSlider" />
 
             <RadzenLabel Text="Lower bound" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="-10000000" Max="0" @bind-Value=@lowerBound Style="width: 200px;" />
-            <RadzenLabel Text="@lowerBound.ToString()" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="-10000000" Max="0" @bind-Value=@ViewModel.RandomLowerBound Style="width: 200px;" />
+            <RadzenLabel Text="@ViewModel.RandomLowerBound.ToString()" Component="valueSlider" />
 
 
             <RadzenLabel Text="Nr of discrepancies" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="0" Max="30" @bind-Value=@randomDiscrepanciesAmount Style="width: 200px;" />
-            <RadzenLabel Text="@randomDiscrepanciesAmount.ToString()" Component="valueSlider" />
+            <RadzenSlider Name="valueSlider" Min="0" Max="30" @bind-Value=@ViewModel.RandomDiscrepanciesAmount Style="width: 200px;" />
+            <RadzenLabel Text="@ViewModel.RandomDiscrepanciesAmount.ToString()" Component="valueSlider" />
 
             <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateNewRandomData)" Text="GO" />
 
@@ -51,8 +58,8 @@
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                 <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="LINEAR" /></h1>
                 <RadzenLabel Text="Linear discrepancy" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="0" Max="7" @bind-Value=@linearDiscrepancy Style="width: 200px;" />
-                <RadzenLabel Text="@linearDiscrepancy.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="0" Max="7" @bind-Value=@ViewModel.LinearDiscrepancy Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.LinearDiscrepancy.ToString()" Component="valueSlider" />
                 <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateLinearData)" Text="GO" />
             </RadzenStack>
         </RadzenCard>
@@ -62,8 +69,8 @@
                 <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="SINE" /></h1>
                 <RadzenLabel Text="Works best for bigger amount of data (eg 360)" Component="valueSlider" />
                 <RadzenLabel Text="Sinus discrepancy" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="3" Max="7" @bind-Value=@sinusDiscrepancy Style="width: 200px;" />
-                <RadzenLabel Text="@sinusDiscrepancy.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="3" Max="7" @bind-Value=@ViewModel.SinusDiscrepancy Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.SinusDiscrepancy.ToString()" Component="valueSlider" />
                 <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="refresh" Size="ButtonSize.Medium" Click="@(GenerateSinusData)" Text="GO" />
             </RadzenStack>
         </RadzenCard>
@@ -72,11 +79,10 @@
     <RadzenChart>
         <RadzenChartTooltipOptions Shared="true" />
         <RadzenLineSeries Smooth="true" Data="@ViewModel.Data" CategoryProperty="Date" Title="Dataset" ValueProperty="Value">
-            @* <RadzenSeriesAnnotation Visible="true" TItem="DateIntegerDataViewModel" Data="@ViewModel.Data.Where(d=>d.IsAnomaly).FirstOrDefault()" OffsetY="-16" Text="Detection!" /> *@
             <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
-            <RadzenSeriesDataLabels Visible="@showDataLabels" />
+            <RadzenSeriesDataLabels Visible="@ViewModel.ShowDataLabels" />
         </RadzenLineSeries>
-        <RadzenLineSeries Smooth="true" Data="@ViewModel.DataPointsDetectedAsAnomalies" CategoryProperty="Date" Title="Anomalies" ValueProperty="Value">
+        <RadzenLineSeries Data="@ViewModel.SpikesDetected" CategoryProperty="Date" Title="Anomalies" ValueProperty="Value" LineType="LineType.Dotted" Interpolation="Interpolation.Step">
             <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
             <RadzenSeriesDataLabels Visible="true" />
         </RadzenLineSeries>
@@ -88,69 +94,182 @@
 
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
         <RadzenCard>
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect Anomalies" /></h1>
-                <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="90" Max="95" @bind-Value=@detectionConfidenceLevel Style="width: 200px;" />
-                <RadzenLabel Text="@detectionConfidenceLevel.ToString()" Component="valueSlider" />
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Detect)" Text="DETECT !" />
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
+                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect spikes" /></h1>
+                <RadzenCard>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                        <RadzenLabel Text="Numeric method" Component="Spikes_NumericMethod_radio" />
+                        <RadzenRadioButtonList Name="Spikes_NumericMethod_radio" @bind-Value=@ViewModel.Spikes_NumericMethod TValue="DetectionMethod" Orientation="Orientation.Vertical">
+                            <Items>
+                                <RadzenRadioButtonListItem Text="IId" Value="DetectionMethod.Iid" TValue="DetectionMethod" />
+                                <RadzenRadioButtonListItem Text="Ssa" Value="DetectionMethod.Ssa" TValue="DetectionMethod" />
+                            </Items>
+                        </RadzenRadioButtonList>
+
+                        <RadzenLabel Text="PValue History Length" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count() -1)" @bind-Value="@ViewModel.Spikes_PValueHistoryLength" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Spikes_PValueHistoryLength.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Training Window Size-SSA only" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.Spikes_TrainingWindowSize" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Spikes_TrainingWindowSize.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Seasonality Window Size-SSA only" Component="valueSlider" />
+                        @* Minimum is 2.Maximum is Maximum value is a Window / 2 - 1. *@
+                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2)" @bind-Value="@ViewModel.Spikes_SeasonalityWindowSize" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Spikes_SeasonalityWindowSize.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Confidence" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="0" Max="100" @bind-Value="@ViewModel.Spikes_Confidence" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Spikes_Confidence.ToString()" Component="valueSlider" />
+                    </RadzenStack>
+                    <RadzenLabel Text="There are more parameters : 'side', 'errorFunction'. Please read Microsoft docs " />
+                </RadzenCard>
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(DetectSpikes)" Text="Detect !" />
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
+
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
         <RadzenCard>
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect ChangePoints" /></h1>
-                <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="90" Max="95" @bind-Value=@detectionConfidenceLevel Style="width: 200px;" />
-                <RadzenLabel Text="@detectionConfidenceLevel.ToString()" Component="valueSlider" />
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Detect)" Text="DETECT !" />
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
+                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect anomalies" /></h1>
+                <RadzenCard>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                        <RadzenLabel Text="Threshold" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.Anomalies_Threshold" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Anomalies_Threshold.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="BatchSize" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.Anomalies_BatchSize" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Anomalies_BatchSize.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Sensitivity" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.Anomalies_Sensitivity" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Anomalies_Sensitivity.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="SrCnnDetectMode" Component="Anomalies_DetectMode_radio" />
+                        <RadzenRadioButtonList Name="Anomalies_DetectMode_radio" @bind-Value=@ViewModel.Anomalies_DetectMode TValue="SrCnnDetectMode" Orientation="Orientation.Vertical">
+                            <Items>
+                                <RadzenRadioButtonListItem Text="IId" Value="SrCnnDetectMode.AnomalyOnly" TValue="SrCnnDetectMode" />
+                                <RadzenRadioButtonListItem Text="Ssa" Value="SrCnnDetectMode.AnomalyAndMargin" TValue="SrCnnDetectMode" />
+                                <RadzenRadioButtonListItem Text="Ssa" Value="SrCnnDetectMode.AnomalyAndExpectedValue" TValue="SrCnnDetectMode" />
+                            </Items>
+                        </RadzenRadioButtonList>
+
+                        <RadzenLabel Text="Period" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.Anomalies_Period" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Anomalies_Period.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="SrCnnDeseasonalityMode" Component="Anomalies_DeseasonalityMode_radio" />
+                        <RadzenRadioButtonList Name="Anomalies_DeseasonalityMode_radio" @bind-Value=@ViewModel.Anomalies_DeseasonalityMode TValue="SrCnnDeseasonalityMode" Orientation="Orientation.Vertical">
+                            <Items>
+                                <RadzenRadioButtonListItem Text="Stl" Value="SrCnnDeseasonalityMode.Stl" TValue="SrCnnDeseasonalityMode" />
+                                <RadzenRadioButtonListItem Text="Mean" Value="SrCnnDeseasonalityMode.Mean" TValue="SrCnnDeseasonalityMode" />
+                                <RadzenRadioButtonListItem Text="Median" Value="SrCnnDeseasonalityMode.Median" TValue="SrCnnDeseasonalityMode" />
+                            </Items>
+                        </RadzenRadioButtonList>
+                    </RadzenStack>
+                    <RadzenLabel Text="There are more parameters : 'side', 'errorFunction'. Please read Microsoft docs " />
+                </RadzenCard>
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(DetectAnomalies)" Text="Detect !" />
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <RadzenCard>
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
+                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect changepoints" /></h1>
+                <RadzenCard>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                        <RadzenLabel Text="Numeric method" Component="ChangePoints_NumericMethod_radio" />
+                        <RadzenRadioButtonList Name="ChangePoints_NumericMethod_radio" @bind-Value=@ViewModel.ChangePoints_NumericMethod TValue="DetectionMethod" Orientation="Orientation.Vertical">
+                            <Items>
+                                <RadzenRadioButtonListItem Text="IId" Value="DetectionMethod.Iid" TValue="DetectionMethod" />
+                                <RadzenRadioButtonListItem Text="Ssa" Value="DetectionMethod.Ssa" TValue="DetectionMethod" />
+                            </Items>
+                        </RadzenRadioButtonList>
+
+                        <RadzenLabel Text="Confidence" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.ChangePoints_Confidence" />
+                        <RadzenLabel Text="@ViewModel.ChangePoints_Confidence.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Change History Length" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.ChangePoints_ChangeHistoryLength" />
+                        <RadzenLabel Text="@ViewModel.ChangePoints_ChangeHistoryLength.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Training Window Size" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.ChangePoints_TrainingWindowSize" />
+                        <RadzenLabel Text="@ViewModel.ChangePoints_TrainingWindowSize.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Seasonality Window Size" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.ChangePoints_SeasonalityWindowSize" />
+                        <RadzenLabel Text="@ViewModel.ChangePoints_SeasonalityWindowSize.ToString()" Component="valueSlider" />
+                    </RadzenStack>
+                    <RadzenLabel Text="There are more parameters like: 'isAdaptive', 'shouldStabilize' etc... Please read Microsoft docs " />
+                </RadzenCard>
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(DetectChangePoints)" Text="Detect !" />
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
 </RadzenStack>
 
-<div>
-</div>
 
 
 @code {
-    private bool showDataLabels = false;
-    private int howManyToGenerate = 20;
-    private int randomUpperBound = 20;
-    private int lowerBound = -20;
-    private int randomDiscrepanciesAmount = 2;
-    private int linearDiscrepancy = 2;
-    private int sinusDiscrepancy = 3;
-    private int detectionConfidenceLevel = 98;
-    public AnomalyDetectionViewModel ViewModel = new AnomalyDetectionViewModel();
+    public AnomalyDetectionViewModel ViewModel = new AnomalyDetectionViewModel() { Data = new List<DateIntegerDataViewModel>(0) };
 
     protected override async Task OnInitializedAsync()
     {
-        if (ViewModel.Data == null)
-            ViewModel.Data = await DataProvider.GetIntegerRandomData(howManyToGenerate, randomUpperBound, lowerBound, randomDiscrepanciesAmount);
+        if (ViewModel.Data == null || !ViewModel.Data.Any())
+        {
+            await GenerateNewRandomData();
+        }
     }
 
     private async Task GenerateNewRandomData()
     {
-        ViewModel.Data = await DataProvider.GetIntegerRandomData(howManyToGenerate, randomUpperBound, lowerBound, randomDiscrepanciesAmount);
-        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+        ViewModel.Data = await DataProvider.GetIntegerRandomData(ViewModel.HowManyToGenerate, ViewModel.RandomUpperBound, ViewModel.RandomLowerBound, ViewModel.RandomDiscrepanciesAmount);
+        ViewModel.SetUpDefaults();
     }
 
     private async Task GenerateLinearData()
     {
-        ViewModel.Data = await DataProvider.GetLinearData(howManyToGenerate, linearDiscrepancy * 0.1f);
-        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+        ViewModel.Data = await DataProvider.GetLinearData(ViewModel.HowManyToGenerate, ViewModel.LinearDiscrepancy * 0.1f);
     }
 
     private async Task GenerateSinusData()
     {
-        ViewModel.Data = await DataProvider.GetSinusData(howManyToGenerate, randomUpperBound, sinusDiscrepancy * 0.1f);
-        ViewModel.Data.ToArray()[howManyToGenerate - 10].IsAnomaly = true;
+        ViewModel.Data = await DataProvider.GetSinusData(ViewModel.HowManyToGenerate, ViewModel.RandomUpperBound, ViewModel.SinusDiscrepancy * 0.1f);
     }
 
-    private async Task Detect()
+    private async Task DetectSpikes()
     {
-        //ViewModel.DataPointsPredicted = await MlForecaster.Forecast(howManyFutureWeeksToPredict, ViewModel.Data);
+        try
+        {
+            ViewModel.SpikesDetected = await MlSpikesAnomaliesChangePointsDetector.DetectSpikes(ViewModel.Spikes_NumericMethod,
+                                                                       ViewModel.Spikes_PValueHistoryLength,
+                                                                       ViewModel.Spikes_TrainingWindowSize,
+                                                                       ViewModel.Spikes_SeasonalityWindowSize,
+                                                                       ViewModel.Spikes_Confidence,
+                                                                       ViewModel.Data,
+                                                                       ml_engine.Forecasting.ForecastColumnName.ValueForMl.ToString());
+        }
+        catch (Exception e)
+        {
+            ViewModel.ErrorOccuredText = e.Message + e.InnerException?.Message;
+            ViewModel.ShowError = true;
+        }
+    }
+
+    private async Task DetectAnomalies()
+    {
+        // ViewModel.DataPointsDetectedAsAnomalies = await MlSpikesAnomaliesChangePointsDetector.DetectSpikes(howManyFutureWeeksToPredict, ViewModel.Data);
+    }
+
+    private async Task DetectChangePoints()
+    {
+        // ViewModel.DataPointsDetectedAsAnomalies = await MlSpikesAnomaliesChangePointsDetector.DetectSpikes(howManyFutureWeeksToPredict, ViewModel.Data);
     }
 }

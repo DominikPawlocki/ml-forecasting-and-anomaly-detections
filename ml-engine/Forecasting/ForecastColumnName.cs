@@ -5,6 +5,6 @@
     {
         NotUsed = 0,
         Value = 1,
-        ValueForMl = 2 //Machine learing likes Single precision not integer !
+        ValueForMl = 2 //Machine learing likes Single precision not integer ! This name is reflecting the DateData.ValueForMl field !
     }
 }

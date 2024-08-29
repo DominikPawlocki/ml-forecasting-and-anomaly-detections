@@ -7,9 +7,9 @@ namespace ml_engine.AnomalyDetections
     {
         public MLContext MlContext { get; }
 
-        public BaseForAllDetectors(MLContext mlContext)
+        public BaseForAllDetectors()
         {
-            MlContext = mlContext;
+            MlContext = new MLContext(1);
         }
 
         protected IDataView CreateEmptyDataView<T>() where T : class
@@ -18,7 +18,7 @@ namespace ml_engine.AnomalyDetections
             return MlContext.Data.LoadFromEnumerable(new List<T>());
         }
 
-        protected IDataView TransformModel<T>(IDataView untrainedModel, EstimatorChain<ITransformer> estimatorChain) where T : class, new()
+        protected IDataView TransformModel<T>(IDataView untrainedModel, EstimatorChain<ITransformer> estimatorChain) where T : class
         {
             // STEP 2:The Transformed Model.
             // In IID Spike detection, we don't need to do training, we just need to do transformation. 

@@ -2,12 +2,11 @@
 {
     public class ForecastingViewModel : ViewModelBase
     {
-        //private int windowSize, seriesLenght;
-
         public IEnumerable<DateIntegerForecasterDataViewModel>? DataPointsPredicted
         {
             get; set;
         }
+
         public int SeriesLenght
         {
             get; set;

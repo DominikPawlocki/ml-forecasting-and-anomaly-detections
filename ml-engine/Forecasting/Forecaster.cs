@@ -75,12 +75,12 @@ namespace ml_engine.Forecasting
         }
 
         private SsaForecastingEstimator GetForecastingPipeline(Enum detectionByColumnName,
-                                                                                                  int windowSize,
-                                                                                                  int seriesLength,
-                                                                                                  int trainSize,
-                                                                                                  int horizon,
-                                                                                                  bool isAdaptive,
-                                                                                                  float confidence)
+                                                               int windowSize,
+                                                               int seriesLength,
+                                                               int trainSize,
+                                                               int horizon,
+                                                               bool isAdaptive,
+                                                               float confidence)
         {
             // Instantiate the forecasting model. After https://github.com/dotnet/machinelearning-samples/blob/main/samples/csharp/end-to-end-apps/Forecasting-Sales/README.md
             return MlContext.Forecasting.ForecastBySsa(
