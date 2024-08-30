@@ -5,7 +5,7 @@
         public string? ErrorOccuredText { get; set; }
         public bool ShowError { get; set; }
 
-        public IEnumerable<DateIntegerDataViewModel> Data { get; set; } = Enumerable.Empty<DateIntegerDataViewModel>();
+        public IEnumerable<DateIntegerDataViewModel> Data { get; set; } = [];
 
         public bool ShowDataLabels { get; set; } = false;
         public int HowManyToGenerate { get; set; } = 20;

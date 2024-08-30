@@ -40,7 +40,7 @@ namespace ml_ui.Services
             return await Task.Run(() =>
             {
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
-                if (dataSetForMl == null)
+                if (dataSetForMl is null)
                     return Enumerable.Empty<DateIntegerForecasterDataViewModel>();
                 var forecast = _forecaster.MlForecast(detectionByColumnName, howManyDataPointsToPredict, winSize, serLen, trnSize, dataSetForMl);
                 var result = new List<DateIntegerForecasterDataViewModel>(forecast.Predictions.Length);

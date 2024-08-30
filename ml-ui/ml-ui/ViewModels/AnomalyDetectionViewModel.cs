@@ -44,11 +44,11 @@ namespace ml_ui.ViewModels
 
         internal void ClearModelSpikes()
         {
-            SpikesDetected = new List<SpikeDetectionDataViewModel>(0);
+            SpikesDetected = [];
         }
         internal void ClearModelAnomalies()
         {
-            AnomaliesDetected = new List<AnomalyDetectionDataViewModel>(0);
+            AnomaliesDetected = [];
         }
 
         internal void SetUpDefaults()

@@ -2,10 +2,7 @@
 {
     public class ForecastingViewModel : ViewModelBase
     {
-        public IEnumerable<DateIntegerForecasterDataViewModel>? DataPointsPredicted
-        {
-            get; set;
-        }
+        public IEnumerable<DateIntegerForecasterDataViewModel>? DataPointsPredicted { get; set; }
 
         public int SeriesLenght { get; set; }
 
@@ -14,7 +11,7 @@
 
         private void ClearModel()
         {
-            DataPointsPredicted = new List<DateIntegerForecasterDataViewModel>(0);
+            DataPointsPredicted = [];
         }
 
         internal void SetUpDefaults()
@@ -31,22 +28,19 @@
             int serLen = Data.Count() / 8;    //'The series length should be greater than the window size.
             int winSize = serLen - 2; //as minumum WindowSize is 2, then it makes that minumum actualData is 32.
 
-
             //Trying to load 2 years of data by default. However it might be that there is no so much data available, or there are different cases
             //In that case, the parameters has to be adjusted cause it will predict 0 or gives exception
-            switch (Data.Count())
+            return Data.Count() switch
             {
-                case 0:
-                    return (0, 0, 0);
-                case int a when a < 8: // --> we have not much data and default params wouldnt work. let adjust
-                    return (2, trnSize, 3);
-                case int a when a < 20: // --> we have not much data and default params wouldnt work. let adjust
-                    return (2, trnSize, 4);
-                case int a when a < 32: // --> we have not much data and default params wouldnt work. let adjust
-                    return (6, trnSize, 10);
-                default:
-                    return (winSize, trnSize, serLen);
-            }
+                0 => (0, 0, 0),
+                // --> we have not much data and default params wouldnt work. let adjust
+                int a when a < 8 => (2, trnSize, 3),
+                // --> we have not much data and default params wouldnt work. let adjust
+                int a when a < 20 => (2, trnSize, 4),
+                // --> we have not much data and default params wouldnt work. let adjust
+                int a when a < 32 => (6, trnSize, 10),
+                _ => (winSize, trnSize, serLen),
+            };
         }
     }
 }

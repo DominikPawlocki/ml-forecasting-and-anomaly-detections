@@ -4,22 +4,8 @@ namespace ml_ui.ViewModels
 {
     public class DateIntegerDataViewModel
     {
-        private DateTime _date;
-        private int _val;
-
-        public DateTime Date
-        {
-            get { return _date; }
-            set
-            {
-                if (_date != value)
-                {
-                    _date = value;
-                }
-            }
-        }
-
-        public int Value { get => _val; set => _val = value; }
+        public DateTime Date { get; set; }
+        public int Value { get; set; }
     }
 
     public class DateIntegerForecasterDataViewModel : DateIntegerDataViewModel

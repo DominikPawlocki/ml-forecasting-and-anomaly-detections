@@ -59,7 +59,7 @@ namespace ml_ui.Services
 
                 var result = new List<SpikeDetectionDataViewModel>(spikesDetected.Length);
 
-                for (var i = 0; i < dataSetForMl.Count(); i++) //travers all dataset to find the same values, like detected spikes are, to copy a date 
+                for (var i = 0; i < dataSetForMl.Count; i++) //travers all dataset to find the same values, like detected spikes are, to copy a date 
                 {
                     Func<double> roundUpUnsurness = () =>
                     {
@@ -124,18 +124,18 @@ namespace ml_ui.Services
             {
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet.OrderBy(d => d.Date)).ToList();
                 AnomalyDetectedVector[] detectedAnomalies = _anomalyDetector.GetAnomalies<DateData>(detectionByColumnName,
-                                                                                                   dataSetForMl,
-                                                                                                   threshold,
-                                                                                                   batchSize,
-                                                                                                   sensitivity,
-                                                                                                   detectMode,
-                                                                                                   period,
-                                                                                                   deseasonalityMode)
+                                                                                                    dataSetForMl,
+                                                                                                    threshold,
+                                                                                                    batchSize,
+                                                                                                    sensitivity,
+                                                                                                    detectMode,
+                                                                                                    period,
+                                                                                                    deseasonalityMode)
                 .ToArray();
 
                 var result = new List<AnomalyDetectionDataViewModel>(detectedAnomalies.Length);
 
-                for (var i = 0; i < dataSetForMl.Count(); i++) //travers all dataset to find the same values, like detected spikes are, to copy a date 
+                for (var i = 0; i < dataSetForMl.Count; i++) //travers all dataset to find the same values, like detected spikes are, to copy a date 
                 {
                     Func<double> roundUpUnsurness = () =>
                     {
@@ -163,7 +163,7 @@ namespace ml_ui.Services
             });
         }
 
-        private U? CreateSingleResultMatchedWithSourceDataPoint<U>(DateData sourceDataPoint, double detectedValue, int isAlert, double unsurnessOrMag, double expectedValue) where U : DateIntegerDataViewModel, new()
+        private static U? CreateSingleResultMatchedWithSourceDataPoint<U>(DateData sourceDataPoint, double detectedValue, int isAlert, double unsurnessOrMag, double expectedValue) where U : DateIntegerDataViewModel, new()
         {
             switch (new U())
             {
