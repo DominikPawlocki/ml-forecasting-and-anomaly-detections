@@ -6,7 +6,7 @@ namespace ml_engine.Forecasting
 {
     public interface IMlForecaster
     {
-        MlForecastResult MlForecast(ForecastColumnName detectionByColumnName,
+        MlForecastResult MlForecast(string detectionByColumnName,
                                     int howManyDataPointsToPredict,
                                     int winSize,
                                     int serLen,
@@ -23,7 +23,7 @@ namespace ml_engine.Forecasting
             MlContext = new MLContext(1);
         }
 
-        public MlForecastResult MlForecast(ForecastColumnName detectionByColumnName,
+        public MlForecastResult MlForecast(string detectionByColumnName,
                                            int howManyDataPointsToPredict, int winSize, int serLen, int trnSize,
                                            IEnumerable<DateData> driverData)
         {
@@ -31,16 +31,6 @@ namespace ml_engine.Forecasting
             //cutTrailingZeroes();
 
             var dataView = MlContext.Data.LoadFromEnumerable(orderedData);
-
-
-            var negativePrediction = new Predicate<MlForecastResult>(res => res.Predictions.Any() && res.Predictions[0] < 0);
-
-            MlForecastResult createResultWithoutML(float itemsOrSalesValue) => new MlForecastResult()
-            {
-                Predictions = new[] { itemsOrSalesValue, itemsOrSalesValue },
-                ConfidenceLowerBounds = new[] { 0f, 0, },
-                ConfidenceUpperBounds = new[] { 0f, 0, },
-            };
 
             MlForecastResult DoPrediction()
             {
@@ -61,7 +51,7 @@ namespace ml_engine.Forecasting
         }
 
         private MlForecastResult ForecastDriver<T>(IDataView data,
-                                                   Enum detectionByColumnName,
+                                                   string detectionByColumnName,
                                                    int windowSize,
                                                    int seriesLength,
                                                    int trainSize,
@@ -74,7 +64,7 @@ namespace ml_engine.Forecasting
             return TrainModel<T>(data, forecastChain);
         }
 
-        private SsaForecastingEstimator GetForecastingPipeline(Enum detectionByColumnName,
+        private SsaForecastingEstimator GetForecastingPipeline(string detectionByColumnName,
                                                                int windowSize,
                                                                int seriesLength,
                                                                int trainSize,
@@ -86,7 +76,7 @@ namespace ml_engine.Forecasting
             return MlContext.Forecasting.ForecastBySsa(
                                                        //This is the name of the column that will be used to store predictions. The column must be a vector of type Single.
                                                        outputColumnName: nameof(MlForecastResult.Predictions).ToString(),
-                                                       inputColumnName: detectionByColumnName.ToString(),
+                                                       inputColumnName: detectionByColumnName,
                                                        //--> the window for analyzis - eg 7 means a week window.
                                                        //This is the most important parameter that you can use to tune the accuracy of the model for your scenario.
                                                        //Specifically, this parameter is used to define a window of time that is used by the algorithm to decompose the time series data into seasonal/periodic and noise components.

@@ -12,11 +12,10 @@
 
 <RadzenStack class="rz-p-0 rz-p-md-6 rz-p-lg-12">
     <h1>ANOMALY DETECTIONS</h1>
-    <div>
-        <h3>
-            <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text=@ViewModel.ErrorOccuredText Visible=@ViewModel.ShowError />
-        </h3>
-    </div>
+    <h3>The SR-CNN algorithm is an advanced and novel algorithm that is based on Spectral Residual (SR) and Convolutional Neural Network(CNN) to detect anomaly on time-series</h3>
+    <a href="url">https://learn.microsoft.com/en-us/dotnet/machine-learning/tutorials/sales-anomaly-detection</a>
+    <a href="url">http://arxiv.org/pdf/1906.03821</a>
+
     <RadzenCard Variant="Variant.Outlined">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
@@ -77,25 +76,44 @@
     </RadzenStack>
 
     <RadzenChart>
-        <RadzenChartTooltipOptions Shared="true" />
+        <RadzenChartTooltipOptions Shared="false" />
         <RadzenLineSeries Smooth="true" Data="@ViewModel.Data" CategoryProperty="Date" Title="Dataset" ValueProperty="Value">
             <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
             <RadzenSeriesDataLabels Visible="@ViewModel.ShowDataLabels" />
         </RadzenLineSeries>
-        <RadzenLineSeries Data="@ViewModel.SpikesDetected" CategoryProperty="Date" Title="Anomalies" ValueProperty="Value" LineType="LineType.Dotted" Interpolation="Interpolation.Step">
+        <RadzenLineSeries Data="@ViewModel.SpikesDetected" CategoryProperty="Date" Title="Spikes" ValueProperty="Value" LineType="LineType.Dotted" Interpolation="Interpolation.Step">
             <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
             <RadzenSeriesDataLabels Visible="true" />
+        </RadzenLineSeries>
+        <RadzenLineSeries Data="@ViewModel.AnomaliesDetected" CategoryProperty="Date" Title="Anomalies" ValueProperty="Value" LineType="LineType.Dotted" Interpolation="Interpolation.Step">
+            <TooltipTemplate Context="data">
+                <div>
+                    Have: @data.Value
+                    Expected: <strong>@(ViewModel.Anomalies_DetectMode == SrCnnDetectMode.AnomalyAndExpectedValue ? data.ExpectedValue : "only in mode AnomalyAndExpectedValue")</strong>
+                </div>
+            </TooltipTemplate>
+            <ChildContent>
+                <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
+                <RadzenSeriesDataLabels Visible="true" />
+            </ChildContent>
         </RadzenLineSeries>
         <RadzenCategoryAxis Padding="20" />
         <RadzenValueAxis>
             <RadzenGridLines Visible="true" />
         </RadzenValueAxis>
     </RadzenChart>
-
+    <div>
+        <h3>
+            <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text=@ViewModel.ErrorOccuredText Visible=@ViewModel.ShowError />
+        </h3>
+    </div>
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
         <RadzenCard>
-            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
-                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect spikes" /></h1>
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="10.5rem">
+                    <img src="/images/spikes_data.png" />
+                    <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect spikes" /></h1>
+                </RadzenStack>
                 <RadzenCard>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                         <RadzenLabel Text="Numeric method" Component="Spikes_NumericMethod_radio" />
@@ -133,33 +151,28 @@
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
         <RadzenCard>
             <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
-                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect anomalies" /></h1>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="10.5rem">
+                    <img src="/images/anomalies_data.png" />
+                    <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect anomalies" /></h1>
+                </RadzenStack>
                 <RadzenCard>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                        <RadzenLabel Text="Threshold" Component="valueSlider" />
-                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.Anomalies_Threshold" Style="width: 200px;" />
-                        <RadzenLabel Text="@ViewModel.Anomalies_Threshold.ToString()" Component="valueSlider" />
-
-                        <RadzenLabel Text="BatchSize" Component="valueSlider" />
-                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.Anomalies_BatchSize" Style="width: 200px;" />
-                        <RadzenLabel Text="@ViewModel.Anomalies_BatchSize.ToString()" Component="valueSlider" />
-
-                        <RadzenLabel Text="Sensitivity" Component="valueSlider" />
-                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.Anomalies_Sensitivity" Style="width: 200px;" />
-                        <RadzenLabel Text="@ViewModel.Anomalies_Sensitivity.ToString()" Component="valueSlider" />
-
                         <RadzenLabel Text="SrCnnDetectMode" Component="Anomalies_DetectMode_radio" />
                         <RadzenRadioButtonList Name="Anomalies_DetectMode_radio" @bind-Value=@ViewModel.Anomalies_DetectMode TValue="SrCnnDetectMode" Orientation="Orientation.Vertical">
                             <Items>
-                                <RadzenRadioButtonListItem Text="IId" Value="SrCnnDetectMode.AnomalyOnly" TValue="SrCnnDetectMode" />
-                                <RadzenRadioButtonListItem Text="Ssa" Value="SrCnnDetectMode.AnomalyAndMargin" TValue="SrCnnDetectMode" />
-                                <RadzenRadioButtonListItem Text="Ssa" Value="SrCnnDetectMode.AnomalyAndExpectedValue" TValue="SrCnnDetectMode" />
+                                <RadzenRadioButtonListItem Text="AnomalyOnly" Value="SrCnnDetectMode.AnomalyOnly" TValue="SrCnnDetectMode" />
+                                <RadzenRadioButtonListItem Text="AnomalyAndMargin" Value="SrCnnDetectMode.AnomalyAndMargin" TValue="SrCnnDetectMode" />
+                                <RadzenRadioButtonListItem Text="AnomalyAndExpectedValue" Value="SrCnnDetectMode.AnomalyAndExpectedValue" TValue="SrCnnDetectMode" />
                             </Items>
                         </RadzenRadioButtonList>
 
-                        <RadzenLabel Text="Period" Component="valueSlider" />
-                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.Anomalies_Period" Style="width: 200px;" />
-                        <RadzenLabel Text="@ViewModel.Anomalies_Period.ToString()" Component="valueSlider" />
+                        <RadzenLabel Text="Threshold" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="0" Max="1" Step="0.1" @bind-Value="@ViewModel.Anomalies_Threshold" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Anomalies_Threshold.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Text="Sensitivity(AnomalyAndMargin only)" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="0" Max="100" @bind-Value="@ViewModel.Anomalies_Sensitivity" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.Anomalies_Sensitivity.ToString()" Component="valueSlider" />
 
                         <RadzenLabel Text="SrCnnDeseasonalityMode" Component="Anomalies_DeseasonalityMode_radio" />
                         <RadzenRadioButtonList Name="Anomalies_DeseasonalityMode_radio" @bind-Value=@ViewModel.Anomalies_DeseasonalityMode TValue="SrCnnDeseasonalityMode" Orientation="Orientation.Vertical">
@@ -180,7 +193,10 @@
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
         <RadzenCard>
             <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
-                <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect changepoints" /></h1>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="10.5rem">
+                    <img src="/images/changePoints_data.png" />
+                    <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Detect changepoints" /></h1>
+                </RadzenStack>
                 <RadzenCard>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                         <RadzenLabel Text="Numeric method" Component="ChangePoints_NumericMethod_radio" />
@@ -237,15 +253,20 @@
     private async Task GenerateLinearData()
     {
         ViewModel.Data = await DataProvider.GetLinearData(ViewModel.HowManyToGenerate, ViewModel.LinearDiscrepancy * 0.1f);
+        ViewModel.SetUpDefaults();
     }
 
     private async Task GenerateSinusData()
     {
         ViewModel.Data = await DataProvider.GetSinusData(ViewModel.HowManyToGenerate, ViewModel.RandomUpperBound, ViewModel.SinusDiscrepancy * 0.1f);
+        ViewModel.SetUpDefaults();
     }
 
     private async Task DetectSpikes()
     {
+        ViewModel.ShowError = false;
+        ViewModel.ClearModelSpikes();
+        ViewModel.ClearModelAnomalies();
         try
         {
             ViewModel.SpikesDetected = await MlSpikesAnomaliesChangePointsDetector.DetectSpikes(ViewModel.Spikes_NumericMethod,
@@ -254,7 +275,7 @@
                                                                        ViewModel.Spikes_SeasonalityWindowSize,
                                                                        ViewModel.Spikes_Confidence,
                                                                        ViewModel.Data,
-                                                                       ml_engine.Forecasting.ForecastColumnName.ValueForMl.ToString());
+                                                                       nameof(ml_data.DateData.ValueForMl));
         }
         catch (Exception e)
         {
@@ -265,7 +286,19 @@
 
     private async Task DetectAnomalies()
     {
-        // ViewModel.DataPointsDetectedAsAnomalies = await MlSpikesAnomaliesChangePointsDetector.DetectSpikes(howManyFutureWeeksToPredict, ViewModel.Data);
+        ViewModel.ShowError = false;
+        try
+        {
+            ViewModel.AnomaliesDetected = await MlSpikesAnomaliesChangePointsDetector.DetectAnomalies(ViewModel.Anomalies_Threshold, ViewModel.Anomalies_BatchSize,
+                                                            ViewModel.Anomalies_Sensitivity, ViewModel.Anomalies_DetectMode,
+                                                            ViewModel.Anomalies_Period, ViewModel.Anomalies_DeseasonalityMode,
+                                                            ViewModel.Data, nameof(ml_data.DateData.ValueForMl));
+        }
+        catch (Exception e)
+        {
+            ViewModel.ErrorOccuredText = e.Message + e.InnerException?.Message;
+            ViewModel.ShowError = true;
+        }
     }
 
     private async Task DetectChangePoints()

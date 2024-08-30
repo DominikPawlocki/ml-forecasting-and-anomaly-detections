@@ -2,48 +2,39 @@
 using Microsoft.ML.Transforms.TimeSeries;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using ml_data;
 
 namespace ml_engine.AnomalyDetections
 {
     public interface IAnomalyDetector
     {
-        //MLContext MlContext { get; }
-
-        //IDataView GetChangePoints<T>(IDataView data,
-        //                             DetectionMethod numericMethod,
-        //                             string inputColumnName,
-        //                             int confidence,
-        //                             int changeHistoryLength,
-        //                             int trainingWindowSize = 100,
-        //                             int seasonalityWindowSize = 10,
-        //                             ErrorFunction errorFunc = ErrorFunction.SignedDifference,
-        //                             MartingaleType martingale = MartingaleType.Power,
-        //                             double eps = 0.1) where T : class, new();
         IEnumerable<AnomalyDetectedVector> GetAnomalies<T>(string detectionByColumnName,
-                                                           IDataView untrainedModel,
+                                                           IEnumerable<DateData> data,
                                                            double threshold,
                                                            int batchSize,
                                                            double sensitivity,
                                                            SrCnnDetectMode detectMode,
                                                            int? period,
-                                                           SrCnnDeseasonalityMode deseasonalityMode) where T : class, new();
+                                                           SrCnnDeseasonalityMode deseasonalityMode) where T : class;
     }
 
     public class AnomalyDetector : BaseForAllDetectors, IAnomalyDetector
     {
         public IEnumerable<AnomalyDetectedVector> GetAnomalies<T>(string detectionByColumnName,
-                                                                  IDataView untrainedModel,
+                                                                  IEnumerable<DateData> data,
                                                                   double threshold,
                                                                   int batchSize,
                                                                   double sensitivity,
                                                                   SrCnnDetectMode detectMode,
                                                                   int? period,
-                                                                  SrCnnDeseasonalityMode deseasonalityMode) where T : class, new()
+                                                                  SrCnnDeseasonalityMode deseasonalityMode) where T : class
         {
+            var orderedData = data.OrderBy(d => d.Date).ToList();
+            var dataView = MlContext.Data.LoadFromEnumerable(orderedData);
+
             //STEP 1: Specify the input column and output column names.
             string outputColumnName = nameof(AnomalyDetectedVector.Prediction);
 
-            //var estimatorChain = new EstimatorChain<ITransformer>();
             Func<string, string> columnNameToDoubleTransformer = (string colName) => ($"{colName}Double");
 
             var estimatorChainTypeConversion = MlContext.Transforms.Conversion.
@@ -51,8 +42,7 @@ namespace ml_engine.AnomalyDetections
                       new InputOutputColumnPair(columnNameToDoubleTransformer(detectionByColumnName), detectionByColumnName)
                     }, DataKind.Double);
             ITransformer tansformedModel = estimatorChainTypeConversion.Fit(CreateEmptyDataView<T>());
-            var newIDataView = tansformedModel.Transform(untrainedModel);
-
+            var newIDataView = tansformedModel.Transform(dataView);
 
             if (period == null)
             {
@@ -70,7 +60,7 @@ namespace ml_engine.AnomalyDetections
             {
                 Threshold = threshold,
                 Sensitivity = sensitivity,
-                DetectMode = (Microsoft.ML.TimeSeries.SrCnnDetectMode)detectMode, // Enum.Parse<SrCnnDetectMode>(detectMode.ToString(), true),
+                DetectMode = (Microsoft.ML.TimeSeries.SrCnnDetectMode)detectMode,
                 Period = period.GetValueOrDefault(),
                 BatchSize = batchSize,
                 DeseasonalityMode = (Microsoft.ML.TimeSeries.SrCnnDeseasonalityMode)deseasonalityMode
@@ -86,9 +76,7 @@ namespace ml_engine.AnomalyDetections
 
         private IEnumerable<AnomalyDetectedVector> GetAnomalies(IDataView resultData)
         {
-            var result = MlContext.Data.CreateEnumerable<AnomalyDetectedVector>(resultData, reuseRowObject: false);
-            return result;
+            return MlContext.Data.CreateEnumerable<AnomalyDetectedVector>(resultData, reuseRowObject: false);
         }
-
     }
 }

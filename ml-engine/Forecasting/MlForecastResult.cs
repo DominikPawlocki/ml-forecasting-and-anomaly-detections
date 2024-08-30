@@ -4,6 +4,13 @@ namespace ml_engine.Forecasting
 {
     public class MlForecastResult
     {
+        public MlForecastResult()
+        {
+            Predictions = [];
+            ConfidenceLowerBounds = [];
+            ConfidenceUpperBounds = [];
+        }
+
         [VectorType(3)]
         public float[] Predictions { get; set; }
         [VectorType(3)]

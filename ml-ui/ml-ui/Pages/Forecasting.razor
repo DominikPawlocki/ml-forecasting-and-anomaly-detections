@@ -11,6 +11,9 @@
 
 <RadzenStack class="rz-p-0 rz-p-md-6 rz-p-lg-12">
     <h1>FORECASTING, PREDICTING</h1>
+    <h3>Singular Spectrum Analysis (SSA) model for univariate time-series forecasting</h3>
+    <a href="url">https://learn.microsoft.com/en-us/dotnet/machine-learning/tutorials/time-series-demand-forecasting</a>
+    <a href="url">https://learn.microsoft.com/pl-pl/dotnet/api/microsoft.ml.forecastingcatalog?view=ml-dotnet</a>
 
     <RadzenCard Variant="Variant.Outlined">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
@@ -25,7 +28,6 @@
             </RadzenStack>
         </RadzenStack>
     </RadzenCard>
-
     <RadzenCard>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
             <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="RANDOM" /></h1>
@@ -70,7 +72,11 @@
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
-
+    <div>
+        <h3>
+            <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text=@ViewModel.ErrorOccuredText Visible=@ViewModel.ShowError />
+        </h3>
+    </div>
     <RadzenChart>
         <RadzenChartTooltipOptions Shared="true" />
         <RadzenLineSeries Smooth="true" Data="@ViewModel.Data" CategoryProperty="Date" Title="Dataset" ValueProperty="Value">
@@ -97,16 +103,16 @@
                     <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="0.5rem">
                         <RadzenLabel Text="Window size" Component="valueSlider" />
                         @* 'The input size for training should be greater than twice the window size.' *@
-                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.WindowSize" Change="@((int a)=>ViewModel.windowSizeOnChange(a))" Style="width: 200px;" />
+                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.WindowSize" Style="width: 200px;" />
                         <RadzenLabel Text="@ViewModel.WindowSize.ToString()" Component="valueSlider" />
 
                         <RadzenLabel Text="Series lenght" Component="valueSlider" />
                         @* 'The series length should be greater than the window size.' *@
-                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.SeriesLenght" Change="@((int a)=>ViewModel.seriesLenghtOnChange(a))" Style="width: 200px;" />
+                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.SeriesLenght" Style="width: 200px;" />
                         <RadzenLabel Text="@ViewModel.SeriesLenght.ToString()" Component="valueSlider" />
 
                         <RadzenLabel Text="Train size" Component="valueSlider" />
-                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.TrainSize" Change="@((int a)=>ViewModel.trainSizeOnChange(a))" Style="width: 200px;" />
+                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.TrainSize" Style="width: 200px;" />
                         <RadzenLabel Text="@ViewModel.TrainSize.ToString()" Component="valueSlider" />
 
                         <RadzenLabel Style="max-width: 350px" Text="There are more parameters like: 'isAdaptive', 'shouldStabilize', 'discountFactor', 'rank' etc... Please read Microsoft docs " />
@@ -121,11 +127,17 @@
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <RadzenCard>
+            <h3>Regression trainer (SDCA Regression algorithm)  </h3>
+            <a href="url">https://github.com/dotnet/machinelearning-samples/tree/main/samples/csharp/getting-started/Regression_TaxiFarePrediction?WT.mc_id=dotnet-35129-website</a>
+            <a href="url">https://github.com/dotnet/machinelearning-samples/tree/main/samples/csharp/getting-started/Regression_BikeSharingDemand</a>
+            <a href="url">https://learn.microsoft.com/en-us/dotnet/machine-learning/tutorials/predict-prices</a>
+        </RadzenCard>
+    </RadzenStack>
+
 </RadzenStack>
-
-<div>
-</div>
-
 
 @code {
     private int howManyFutureWeeksToPredict = 2;
@@ -161,7 +173,16 @@
 
     private async Task Predict()
     {
-        ViewModel.DataPointsPredicted = await MlForecaster.Forecast(howManyFutureWeeksToPredict, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
+        ViewModel.ShowError = false;
+        try
+        {
+            ViewModel.DataPointsPredicted = await MlForecaster.Forecast(nameof(ml_data.DateData.ValueForMl), howManyFutureWeeksToPredict, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
+        }
+        catch (Exception e)
+        {
+            ViewModel.ErrorOccuredText = e.Message + e.InnerException?.Message;
+            ViewModel.ShowError = true;
+        }
     }
 
 }

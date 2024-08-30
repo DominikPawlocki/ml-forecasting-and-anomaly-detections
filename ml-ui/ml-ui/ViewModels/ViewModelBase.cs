@@ -1,24 +1,11 @@
 ﻿namespace ml_ui.ViewModels
 {
-    public abstract class ViewModelBase : PropertyChangedNotifier
+    public abstract class ViewModelBase
     {
         public string? ErrorOccuredText { get; set; }
         public bool ShowError { get; set; }
 
-        protected IEnumerable<DateIntegerDataViewModel> _data;
-
-        public IEnumerable<DateIntegerDataViewModel> Data
-        {
-            get { return _data; }
-            set
-            {
-                if (_data != value)
-                {
-                    _data = value;
-                    NotifyPropertyChanged(nameof(this.Data));
-                }
-            }
-        }
+        public IEnumerable<DateIntegerDataViewModel> Data { get; set; } = Enumerable.Empty<DateIntegerDataViewModel>();
 
         public bool ShowDataLabels { get; set; } = false;
         public int HowManyToGenerate { get; set; } = 20;

@@ -7,7 +7,8 @@ namespace ml_ui.Services
 {
     public interface IMlForecastingService
     {
-        Task<IEnumerable<DateIntegerForecasterDataViewModel>> Forecast(int howManyDataPointsToPredict,
+        Task<IEnumerable<DateIntegerForecasterDataViewModel>> Forecast(string detectionByColumnName,
+                                                                       int howManyDataPointsToPredict,
                                                                        int winSize,
                                                                        int serLen,
                                                                        int trnSize,
@@ -25,7 +26,8 @@ namespace ml_ui.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<DateIntegerForecasterDataViewModel>> Forecast(int howManyDataPointsToPredict,
+        public async Task<IEnumerable<DateIntegerForecasterDataViewModel>> Forecast(string detectionByColumnName,
+                                                                                    int howManyDataPointsToPredict,
                                                                                     int winSize,
                                                                                     int serLen,
                                                                                     int trnSize,
@@ -38,7 +40,9 @@ namespace ml_ui.Services
             return await Task.Run(() =>
             {
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
-                var forecast = _forecaster.MlForecast(ForecastColumnName.ValueForMl, howManyDataPointsToPredict, winSize, serLen, trnSize, dataSetForMl);
+                if (dataSetForMl == null)
+                    return Enumerable.Empty<DateIntegerForecasterDataViewModel>();
+                var forecast = _forecaster.MlForecast(detectionByColumnName, howManyDataPointsToPredict, winSize, serLen, trnSize, dataSetForMl);
                 var result = new List<DateIntegerForecasterDataViewModel>(forecast.Predictions.Length);
                 for (var i = 0; i < forecast.Predictions.Count(); i++)
                 {
@@ -53,7 +57,6 @@ namespace ml_ui.Services
                 }
                 return result;
             });
-            //return _mapper.Map<IEnumerable<DateIntegerForecasterDataViewModel>>(forecast);
         }
     }
 }

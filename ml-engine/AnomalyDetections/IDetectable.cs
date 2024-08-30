@@ -21,6 +21,10 @@ namespace ml_engine.AnomalyDetections
     /// </summary>
     public class SpikesDetectedVector : IDetectable
     {
+        public SpikesDetectedVector()
+        {
+            Prediction = [];
+        }
         [VectorType(3)]
         public double[] Prediction { get; set; }
     }
@@ -33,12 +37,20 @@ namespace ml_engine.AnomalyDetections
     /// </summary>
     public class AnomalyDetectedVector : IDetectable
     {
+        public AnomalyDetectedVector()
+        {
+            Prediction = [];
+        }
         [VectorType(7)]
         public double[] Prediction { get; set; }
     }
 
     public class ChangepointsWithMissingValuesDetectedVector : IDetectable, IMissingValueDetectable
     {
+        public ChangepointsWithMissingValuesDetectedVector()
+        {
+            Prediction = [];
+        }
         [VectorType(3)]
         public double[] Prediction { get; set; }
 

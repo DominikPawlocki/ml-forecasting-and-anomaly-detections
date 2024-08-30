@@ -2,7 +2,7 @@
 
 namespace ml_ui.ViewModels
 {
-    public class DateIntegerDataViewModel : PropertyChangedNotifier
+    public class DateIntegerDataViewModel
     {
         private DateTime _date;
         private int _val;
@@ -15,7 +15,6 @@ namespace ml_ui.ViewModels
                 if (_date != value)
                 {
                     _date = value;
-                    NotifyPropertyChanged(nameof(this.Date));
                 }
             }
         }
@@ -46,6 +45,23 @@ namespace ml_ui.ViewModels
 
         public new int Value { get { return (int)ScoreOriginal; } }
         public double PValue { get; set; }
+    }
+
+    /// <param name="detectMode">An enum type of <see cref="SrCnnDetectMode"/>.
+    /// When set to AnomalyOnly, the output vector would be a 3-element Double vector of (IsAnomaly, RawScore, Mag).
+    /// When set to AnomalyAndExpectedValue, the output vector would be a 4-element Double vector of (IsAnomaly, RawScore, Mag, ExpectedValue).
+    /// When set to AnomalyAndMargin, the output vector would be a 7-element Double vector of (IsAnomaly, AnomalyScore, Mag, ExpectedValue, BoundaryUnit, UpperBoundary, LowerBoundary).
+    /// The RawScore is output by SR to determine whether a point is an anomaly or not, under AnomalyAndMargin mode, when a point is an anomaly, an AnomalyScore will be calculated according to sensitivity setting.
+    /// Default value is AnomalyOnly.</param>
+    public class AnomalyDetectionDataViewModel : DateIntegerDataViewModel
+    {
+        public bool IsAlert { get; set; }
+        public double ScoreOriginal { get; set; }
+        public new int Value { get { return (int)ScoreOriginal; } }
+
+        //public double RawScore { get; set; } --> not needed for me now, its internal numeric method value output, cant find valueable meaning for me
+        public double Mag { get; set; }
+        public double ExpectedValue { get; set; }
     }
 
 

@@ -4,33 +4,42 @@ using ml_data;
 using ml_ui.ViewModels;
 using System.Data;
 using AutoMapper;
-using System.Drawing;
-using Microsoft.ML;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using Newtonsoft.Json.Linq;
 
 namespace ml_ui.Services
 {
-    interface IMlDataAnomaliesDetectingService
+    public interface IMlDataAnomaliesDetectingService
     {
-        public Task<IEnumerable<SpikeDetectionDataViewModel>> DetectSpikes(DetectionMethod numericMethod,
-                                                                           int pvalueHistoryLength,
-                                                                           int ssaTrainingWindowSize,
-                                                                           int ssaSeasonalityWindowSize,
-                                                                           int confidence,
-                                                                           IEnumerable<DateIntegerDataViewModel> dataSet,
-                                                                           string detectionByColumnName,
-                                                                           bool detectedAlertsOnly = true);
-
+        Task<IEnumerable<SpikeDetectionDataViewModel>> DetectSpikes(DetectionMethod numericMethod,
+                                                                    int pvalueHistoryLength,
+                                                                    int ssaTrainingWindowSize,
+                                                                    int ssaSeasonalityWindowSize,
+                                                                    int confidence,
+                                                                    IEnumerable<DateIntegerDataViewModel> dataSet,
+                                                                    string detectionByColumnName,
+                                                                    bool detectedAlertsOnly = true);
+        public Task<IEnumerable<AnomalyDetectionDataViewModel>> DetectAnomalies(double threshold,
+                                                                                int batchSize,
+                                                                                double sensitivity,
+                                                                                SrCnnDetectMode detectMode,
+                                                                                int? period,
+                                                                                SrCnnDeseasonalityMode deseasonalityMode,
+                                                                                IEnumerable<DateIntegerDataViewModel> dataSet,
+                                                                                string detectionByColumnName,
+                                                                                bool detectedAlertsOnly = true);
     }
+
     public class MlDataAnomaliesDetectingService : IMlDataAnomaliesDetectingService
     {
         private readonly ISpikesDetector _spikesDetector;
+        private readonly IAnomalyDetector _anomalyDetector;
         private readonly IMapper _mapper;
 
-        public MlDataAnomaliesDetectingService(ISpikesDetector spikesDetector, IMapper mapper)
+        public MlDataAnomaliesDetectingService(ISpikesDetector spikesDetector,
+                                               IAnomalyDetector anomalyDetector,
+                                               IMapper mapper)
         {
             _spikesDetector = spikesDetector;
+            _anomalyDetector = anomalyDetector;
             _mapper = mapper;
         }
 
@@ -46,8 +55,7 @@ namespace ml_ui.Services
             return await Task.Run(() =>
             {
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet.OrderBy(d => d.Date)).ToList();
-                SpikesDetectedVector[] spikesDetected;
-                spikesDetected = RunSpikeDetection(numericMethod, pvalueHistoryLength, ssaTrainingWindowSize, ssaSeasonalityWindowSize, confidence, detectionByColumnName, dataSetForMl);
+                SpikesDetectedVector[] spikesDetected = RunSpikeDetection(numericMethod, pvalueHistoryLength, ssaTrainingWindowSize, ssaSeasonalityWindowSize, confidence, detectionByColumnName, dataSetForMl);
 
                 var result = new List<SpikeDetectionDataViewModel>(spikesDetected.Length);
 
@@ -67,21 +75,12 @@ namespace ml_ui.Services
                             sourceDataPoint: dataSetForMl[i],
                             detectedValue: spikesDetected[i].Prediction[1], // 2nd (1) = Score(value where the anomaly is detected e.g.number of sales)
                             isAlert: (int)spikesDetected[i].Prediction[0],  // Alert(0 for no alert, 1 for an alert)
-                            unsurnessOrMag: roundUpUnsurness()); // 3rd (2) = P-value(value used to measure how likely an anomaly is to be true vs.background noise).
-
-                        result.Add(singleResult);
+                            unsurnessOrMag: roundUpUnsurness(),// 3rd (2) = P-value(value used to measure how likely an anomaly is to be true vs.background noise).
+                            expectedValue: 0); //Expected Value doesnt work for spike detection 
+                        if (singleResult != null)
+                            result.Add(singleResult);
                     }
                 }
-                //for (var i = 0; i < spikesDetected.Where(s => s.Prediction[0] == 1).Count(); i++) //lets take alerted ones only 
-                //{
-                //    result.Add(new SpikeDetectionDataViewModel()
-                //    {
-                //        Date = dataSetForMl.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * (i + 1)),
-                //        IsAlert = true,
-                //        ScoreOriginal = spikesDetected[i].Prediction[1],
-                //        PValue = spikesDetected[i].Prediction[2]
-                //    });
-                //}
                 return result;
 
                 SpikesDetectedVector[] RunSpikeDetection(DetectionMethod numericMethod, int pvalueHistoryLength, int ssaTrainingWindowSize, int ssaSeasonalityWindowSize, int confidence, string detectionByColumnName, IEnumerable<DateData> dataSetForMl)
@@ -111,7 +110,60 @@ namespace ml_ui.Services
             });
         }
 
-        private U CreateSingleResultMatchedWithSourceDataPoint<U>(DateData sourceDataPoint, double detectedValue, int isAlert, double unsurnessOrMag) where U : DateIntegerDataViewModel, new()
+        public async Task<IEnumerable<AnomalyDetectionDataViewModel>> DetectAnomalies(double threshold,
+                                                                                      int batchSize,
+                                                                                      double sensitivity,
+                                                                                      SrCnnDetectMode detectMode,
+                                                                                      int? period,
+                                                                                      SrCnnDeseasonalityMode deseasonalityMode,
+                                                                                      IEnumerable<DateIntegerDataViewModel> dataSet,
+                                                                                      string detectionByColumnName,
+                                                                                      bool detectedAlertsOnly = true)
+        {
+            return await Task.Run(() =>
+            {
+                var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet.OrderBy(d => d.Date)).ToList();
+                AnomalyDetectedVector[] detectedAnomalies = _anomalyDetector.GetAnomalies<DateData>(detectionByColumnName,
+                                                                                                   dataSetForMl,
+                                                                                                   threshold,
+                                                                                                   batchSize,
+                                                                                                   sensitivity,
+                                                                                                   detectMode,
+                                                                                                   period,
+                                                                                                   deseasonalityMode)
+                .ToArray();
+
+                var result = new List<AnomalyDetectionDataViewModel>(detectedAnomalies.Length);
+
+                for (var i = 0; i < dataSetForMl.Count(); i++) //travers all dataset to find the same values, like detected spikes are, to copy a date 
+                {
+                    Func<double> roundUpUnsurness = () =>
+                    {
+                        return detectedAnomalies[i].Prediction[2] < 0.001 || Double.IsNaN(detectedAnomalies[i].Prediction[2])
+                            ? 0
+                            : Math.Round(detectedAnomalies[i].Prediction[2], 3);
+                    };
+                    //The RawScore (2nd Index, [1] is output by SR to determine whether a point is an anomaly or not,
+                    //under AnomalyAndMargin mode, when a point is an anomaly, an AnomalyScore will be calculated according to sensitivity setting.
+                    if (detectedAlertsOnly && detectedAnomalies[i].Prediction[0] != 1)  //1st (0) value in vector means if it is alert, or not (boolean 0,1)
+                        continue;
+                    {
+                        var singleResult = CreateSingleResultMatchedWithSourceDataPoint<AnomalyDetectionDataViewModel>(
+                            sourceDataPoint: dataSetForMl[i],
+                            detectedValue: detectedAnomalies[i].Prediction[1], // //The RawScore (2nd Index, [1] is output by SR to determine whether a point is an anomaly or not,
+                            isAlert: (int)detectedAnomalies[i].Prediction[0],  // Alert(0 for no alert, 1 for an alert)
+                            unsurnessOrMag: roundUpUnsurness(),
+                            expectedValue: detectMode == SrCnnDetectMode.AnomalyAndExpectedValue ? detectedAnomalies[i].Prediction[3] : 0 //Only in AnomalyAndExpectedMode
+                            );
+                        if (singleResult != null)
+                            result.Add(singleResult);
+                    }
+                }
+                return result;
+            });
+        }
+
+        private U? CreateSingleResultMatchedWithSourceDataPoint<U>(DateData sourceDataPoint, double detectedValue, int isAlert, double unsurnessOrMag, double expectedValue) where U : DateIntegerDataViewModel, new()
         {
             switch (new U())
             {
@@ -127,15 +179,15 @@ namespace ml_ui.Services
                     spike.IsAlert = isAlert == 1;
                     spike.PValue = unsurnessOrMag;
                     return spike as U;
-                //case WeeklyAmountAnomalyResultDTO anomaly:
-                //    anomaly.Items = items;
-                //    anomaly.Sales = sales;
-                //    anomaly.WeekendDate = weekendDate.ToShortDateString();
-                //    anomaly.IsAlert = isAlert == 1;
-                //    anomaly.Mag = unsurnessOrMag;
-                //    return anomaly as U;
+                case AnomalyDetectionDataViewModel anomaly:
+                    anomaly.ScoreOriginal = sourceDataPoint.Value;
+                    anomaly.Date = sourceDataPoint.Date;
+                    anomaly.IsAlert = isAlert == 1;
+                    anomaly.Mag = unsurnessOrMag;
+                    anomaly.ExpectedValue = expectedValue;
+                    return anomaly as U;
                 default:
-                    return null;
+                    return new U();
             }
         }
     }

@@ -7,60 +7,10 @@
             get; set;
         }
 
-        public int SeriesLenght
-        {
-            get; set;
-        }
+        public int SeriesLenght { get; set; }
 
-        public int WindowSize
-        {
-            get; set;
-        }
-        public int TrainSize
-        {
-            get; set;
-            //get => trainSize;
-            //set
-            //{
-            //    if (trainSize != value)
-            //    {
-            //        trainSize = value;
-            //        NotifyPropertyChanged(nameof(this.TrainSize));
-            //    }
-            //}
-        }
-
-        internal void seriesLenghtOnChange(int newSeriesLenght)
-        {
-            //'The series length should be greater than the window size.'
-            if (newSeriesLenght <= WindowSize) return;
-            else
-                SeriesLenght = newSeriesLenght;
-        }
-
-
-        internal void windowSizeOnChange(int newWindowSize)
-        {
-            //'The input size for training should be greater than twice the window size.'
-            if (newWindowSize * 2 >= TrainSize)
-                return;
-            //'The series length should be greater than the window size.'
-            if (newWindowSize >= SeriesLenght)
-            {
-                SeriesLenght = newWindowSize + 1;
-                WindowSize = newWindowSize;
-            }
-            else
-                WindowSize = newWindowSize;
-        }
-
-        internal void trainSizeOnChange(int newTrainSize)
-        {
-            //'The input size for training should be greater than twice the window size.'
-            if (newTrainSize < WindowSize * 2)
-                WindowSize = newTrainSize / 2 - 1;
-            return;
-        }
+        public int WindowSize { get; set; }
+        public int TrainSize { get; set; }
 
         private void ClearModel()
         {
@@ -69,6 +19,7 @@
 
         internal void SetUpDefaults()
         {
+            ShowError = false;
             ClearModel();
             (WindowSize, TrainSize, SeriesLenght) = SetDefaultModelTrainingParametersAccordingtoDataSet();
         }
