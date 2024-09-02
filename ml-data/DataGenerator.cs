@@ -85,11 +85,11 @@
                 {
                     var d = new Random().Next((int)(i - i * sinusDiscrepancy), (int)(i + i * sinusDiscrepancy));
                     //data.Add(new DateData(startingDate.AddDays(7 * i), (int)(Math.Sin((i * (Math.PI)) / 180) * valueHigherBound * d)));
-                    data.Add(new DateData(startingDate.AddDays(7 * i), (int)(Math.Sin((d * (Math.PI)) / 180) * valueHigherBound)));
+                    data.Add(new DateData(startingDate.AddDays(7 * i), (int)(Math.Sin((d * (Math.PI)) / 180) * valueHigherBound + valueHigherBound)));
                 }
                 else
                 {
-                    data.Add(new DateData(startingDate.AddDays(7 * i), (int)(Math.Sin((i * (Math.PI)) / 180) * valueHigherBound)));
+                    data.Add(new DateData(startingDate.AddDays(7 * i), (int)(Math.Sin((i * (Math.PI)) / 180) * valueHigherBound) + valueHigherBound));
                 }
             }
 

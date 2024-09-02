@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.ML.Data;
+using Microsoft.ML;
 using ml_data;
 using ml_engine.Forecasting;
 using ml_ui.ViewModels;
@@ -13,11 +15,12 @@ namespace ml_ui.Services
                                                                        int serLen,
                                                                        int trnSize,
                                                                        IEnumerable<DateIntegerDataViewModel> dataSet);
-        Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastByLinearRegression(string regressionLearnerName,
+        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)> TrainLinearRegression(string regressionLearnerName,
                                                                                          string detectionByColumnName,
-                                                                                         DateTime startingDate,
-                                                                                         int howManyDataPointsToPredict,
                                                                                          IEnumerable<DateIntegerDataViewModel> dataSet);
+        Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForerecastByLinearRegression(TransformerChain<ITransformer> trainedRegressionModel,
+                                                                                                        DateTime pointsToBePredictedStartDate,
+                                                                                                        int howManyDataPointsToPredict);
     }
 
     public class MlForecastingService : IMlForecastingService
@@ -64,21 +67,13 @@ namespace ml_ui.Services
             });
         }
 
-        public async Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastByLinearRegression(string regressionLearnerName,
-                                                                                                      string detectionByColumnName,
-                                                                                                      DateTime pointsToBePredictedStartDate,
-                                                                                                      int howManyDataPointsToPredict,
-                                                                                                      IEnumerable<DateIntegerDataViewModel> dataSet)
+        public async Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForerecastByLinearRegression(TransformerChain<ITransformer> trainedRegressionModel,
+                                                                                                        DateTime pointsToBePredictedStartDate,
+                                                                                                        int howManyDataPointsToPredict)
         {
-
-            if (dataSet == null || !dataSet.Any())
-            {
-                return [];
-            }
             return await Task.Run(() =>
             {
-                var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
-                if (dataSetForMl is null)
+                if (howManyDataPointsToPredict == 0)
                     return Enumerable.Empty<DateIntegerForecasterDataViewModel>();
 
                 var toBeRunAgainstModel = new List<DateData>();
@@ -88,12 +83,35 @@ namespace ml_ui.Services
                     toBeRunAgainstModel.Add(new DateData(pointsToBePredictedStartDate, 0)); //this 0 is to be predicted (run against trained model)
                 }
 
-                var forecast = _forecaster.ForecastByLinearRegression(regressionLearnerName, detectionByColumnName, toBeRunAgainstModel, dataSetForMl);
+                var forecast = _forecaster.ForecastByLinearRegression(trainedRegressionModel, toBeRunAgainstModel);
                 //var result = new List<DateIntegerForecasterDataViewModel>(howManyDataPointsToPredict);
                 var result = _mapper.Map<IEnumerable<DateIntegerForecasterDataViewModel>>(forecast);
 
-
                 return result;
+            });
+        }
+
+        public async Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)>
+            TrainLinearRegression(
+                string regressionLearnerName,
+                string detectionByColumnName,
+                IEnumerable<DateIntegerDataViewModel> dataSet)
+        {
+
+            if (dataSet == null || !dataSet.Any())
+            {
+                return (Enumerable.Empty<DateIntegerForecasterDataViewModel>(), null);
+            }
+            return await Task.Run(() =>
+            {
+                var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
+                if (dataSetForMl is null)
+                    return (Enumerable.Empty<DateIntegerForecasterDataViewModel>(), null);
+
+                var modelOutput = _forecaster.TrainModelAndReturnLearntOutput(regressionLearnerName, detectionByColumnName, dataSetForMl);
+                var result = _mapper.Map<IEnumerable<DateIntegerForecasterDataViewModel>>(modelOutput.trainedModelDataOutput);
+
+                return (result, modelOutput.trainedModel);
             });
         }
     }

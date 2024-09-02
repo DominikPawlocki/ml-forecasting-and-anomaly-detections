@@ -1,9 +1,13 @@
-﻿namespace ml_ui.ViewModels
+﻿using Microsoft.ML.Data;
+using Microsoft.ML;
+
+namespace ml_ui.ViewModels
 {
     public class ForecastingViewModel : ViewModelBase
     {
         public IEnumerable<DateIntegerForecasterDataViewModel>? DataPointsPredicted { get; set; } = [];
         public IEnumerable<DateIntegerForecasterDataViewModel>? RegressionTrainedModelDataOutput { get; set; } = [];
+        public TransformerChain<ITransformer>? TrainedRegressionModel { get; set; }
 
         public int SeriesLenght { get; set; }
 
@@ -17,6 +21,8 @@
         private void ClearModel()
         {
             DataPointsPredicted = [];
+            RegressionTrainedModelDataOutput = [];
+            TrainedRegressionModel = null;
         }
 
         internal void SetUpDefaults()

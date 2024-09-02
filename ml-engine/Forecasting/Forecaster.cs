@@ -4,8 +4,6 @@ using Microsoft.ML.Trainers;
 using Microsoft.ML.Transforms.TimeSeries;
 using ml_data;
 using System.Globalization;
-using System.Linq;
-using static Microsoft.ML.ForecastingCatalog;
 
 namespace ml_engine.Forecasting
 {
@@ -18,10 +16,13 @@ namespace ml_engine.Forecasting
                                     int trnSize,
                                     IEnumerable<DateData> driverData);
 
-        public IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(string regressionLearnerName,
-                                                                                            string detectionByColumnName,
-                                                                                            IEnumerable<DateData> dataPointsToBePredictedByModel,
-                                                                                            IEnumerable<DateData> driverData);
+        IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
+                                                                                     IEnumerable<DateData> dataPointsToBePredictedByModel,
+                                                                                     bool ignoreMissingColumns = true);
+
+        (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
+            TrainModelAndReturnLearntOutput(string regressionLearnerName, string detectionByColumnName, IEnumerable<DateData> allDataPointsUsedFortraining);
+
     }
 
     public class Forecaster : IMlForecaster
@@ -60,16 +61,32 @@ namespace ml_engine.Forecasting
             return resultData;
         }
 
-        public IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(string regressionLearnerName,
-                                                                                            string detectionByColumnName,
+        public IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
                                                                                             IEnumerable<DateData> dataPointsToBePredictedByModel,
-                                                                                            IEnumerable<DateData> driverData)
+                                                                                            bool ignoreMissingColumns = true)
+        {
+            // Create prediction engine related to the loaded trained model
+            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePredition>(trainedModel);
+            var result = new List<MlLinearRegressionDateValuePredition>(dataPointsToBePredictedByModel.Count());
+            foreach (var dataPoint in dataPointsToBePredictedByModel)
+            {
+                var forecast = predEngine.Predict(new DateData(dataPoint.YearForMl, dataPoint.MonthForMl, dataPoint.DayForMl)); // ,0 -> this value is to be predicted for given date
+                result.Add(forecast);
+            }
+            return result;
+        }
+
+        public (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
+            TrainModelAndReturnLearntOutput(string regressionLearnerName,
+                                            string detectionByColumnName,
+                                            //IEnumerable<DateData> dataPointsToBePredictedByModel,
+                                            IEnumerable<DateData> driverData)
         {
             var orderedData = driverData.OrderBy(d => d.Date).ToList();
 
             var dataView = MlContext.Data.LoadFromEnumerable(orderedData);
 
-            var r = ForecastByRegression(regressionLearnerName, data: dataView, dataPointsToBePredictedByModel, detectionByColumnName: detectionByColumnName);
+            var r = ForecastByRegression(regressionLearnerName, dataView, detectionByColumnName, driverData);
             return r;
         }
 
@@ -87,10 +104,10 @@ namespace ml_engine.Forecasting
             return PredictBySsa<T>(data, forecastChain);
         }
 
-        private IEnumerable<MlLinearRegressionDateValuePredition> ForecastByRegression(string regressionLearnerName,
-                                                                                       IDataView data,
-                                                                                       IEnumerable<DateData> dataPointsToBePredictedByModel,
-                                                                                       string detectionByColumnName)
+        private (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
+            ForecastByRegression(string regressionLearnerName, IDataView data,//IEnumerable<DateData> dataPointsToBePredictedByModel,
+                                                                                       string detectionByColumnName,
+                                                                                       IEnumerable<DateData> driverData)
         {
             // STEP 2: Common data process configuration with pipeline data transformations
             //var dataProcessPipeline = MlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(TaxiTrip.FareAmount))
@@ -135,15 +152,31 @@ namespace ml_engine.Forecasting
             //                            .Append(MlContext.Transforms.Concatenate("Features", nameof(DateData.YearForMl), nameof(DateData.MonthForMl), nameof(DateData.DayForMl)))
             //                            .AppendCacheCheckpoint(MlContext); // Use in-memory cache for small/medium datasets to lower training time. Do NOT use it (remove .AppendCacheCheckpoint()) when handling very large datasets.
 
-            var dataProcessPipeline = MlContext.Transforms.Concatenate("Features", nameof(DateData.YearForMl), nameof(DateData.MonthForMl), nameof(DateData.DayForMl))
+            var dataProcessPipeline = MlContext.Transforms.
+                Concatenate("Features", nameof(DateData.YearForMl), nameof(DateData.MonthForMl), nameof(DateData.DayForMl))
                             .AppendCacheCheckpoint(MlContext); // Use in-memory cache for small/medium datasets to lower training time. Do NOT use it (remove .AppendCacheCheckpoint()) when handling very large datasets.
 
             var (name, trainerChoosen) = FetchAllRegressionLearners(labelColumnName: detectionByColumnName, featureColumnName: "Features").FirstOrDefault(r => r.name == regressionLearnerName);
-            //var trainer = GetForecastingRegressionPipeline(detectionByColumnName, "Features");
 
             var trainingPipeline = dataProcessPipeline.Append(trainerChoosen);
 
-            return PredictByRegression(data, dataPointsToBePredictedByModel, trainingPipeline);
+            // Train.
+            var trainedModel = trainingPipeline.Fit(data);
+
+            //-------------- model evaluation -------------------
+            var predictions = trainedModel.Transform(data);
+            //var metrics = MlContext.Regression.Evaluate(predictions, nameof(DateData.ValueForMl));
+            //-------------------------------------------------
+            //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
+            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePredition>(trainedModel);
+            var result = new List<MlLinearRegressionDateValuePredition>(driverData.Count());
+            foreach (var dataPoint in driverData)
+            {
+                var forecast = predEngine.Predict(new DateData(dataPoint.YearForMl, dataPoint.MonthForMl, dataPoint.DayForMl)); // ,0 -> this value is to be predicted for given date
+                result.Add(forecast);
+            }
+
+            return (result, trainedModel); //in memory, be cautious when doing like with with bigger dataSets, rather use Save and Load methods via file or Stream
         }
 
         private SsaForecastingEstimator GetForecastingSsaPipeline(string detectionByColumnName,
@@ -225,47 +258,6 @@ namespace ml_engine.Forecasting
 
             var forecast = forecastEngine.Predict();
             return forecast;
-        }
-
-
-        private (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
-            TrainModel(IDataView trainingDataView, EstimatorChain<ITransformer> t, IEnumerable<DateData> allDataPointsUsedFortraining)
-        {
-            // Train.
-            var trainedModel = t.Fit(trainingDataView);
-
-            //-------------- model evaluation -------------------
-            var predictions = trainedModel.Transform(trainingDataView);
-            //var metrics = MlContext.Regression.Evaluate(predictions, nameof(DateData.ValueForMl));
-            //-------------------------------------------------
-            //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
-            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePredition>(trainedModel);
-            var result = new List<MlLinearRegressionDateValuePredition>(allDataPointsUsedFortraining.Count());
-            foreach (var dataPoint in allDataPointsUsedFortraining)
-            {
-                var forecast = predEngine.Predict(new DateData(dataPoint.YearForMl, dataPoint.MonthForMl, dataPoint.DayForMl)); // ,0 -> this value is to be predicted for given date
-                result.Add(forecast);
-            }
-
-            return (result, trainedModel);
-        }
-
-        private IEnumerable<MlLinearRegressionDateValuePredition> PredictByRegression(TransformerChain<ITransformer> trainedModel,
-                                                                                      IEnumerable<DateData> dataPointsToBePredictedByModel,
-                                                                                      EstimatorChain<ITransformer> t,
-                                                                                      bool ignoreMissingColumns = true)
-        {
-
-
-            // Create prediction engine related to the loaded trained model
-            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePredition>(trainedModel);
-            var result = new List<MlLinearRegressionDateValuePredition>(dataPointsToBePredictedByModel.Count());
-            foreach (var dataPoint in dataPointsToBePredictedByModel)
-            {
-                var forecast = predEngine.Predict(new DateData(dataPoint.YearForMl, dataPoint.MonthForMl, dataPoint.DayForMl)); // ,0 -> this value is to be predicted for given date
-                result.Add(forecast);
-            }
-            return result;
         }
 
         private (string name, IEstimator<ITransformer> value)[] FetchAllRegressionLearners(string labelColumnName, string featureColumnName)

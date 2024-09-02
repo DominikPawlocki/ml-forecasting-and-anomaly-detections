@@ -78,7 +78,7 @@
         </h3>
     </div>
     <RadzenChart>
-        <RadzenChartTooltipOptions Shared="true" />
+        <RadzenChartTooltipOptions Shared="false" />
         <RadzenLineSeries Smooth="true" Data="@ViewModel.Data" CategoryProperty="Date" Title="Dataset" ValueProperty="Value">
             @* <RadzenSeriesAnnotation Visible="true" TItem="DateIntegerDataViewModel" Data="@ViewModel.Data.Where(d=>d.IsAnomaly).FirstOrDefault()" OffsetY="-16" Text="Detection!" /> *@
             <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
@@ -86,11 +86,11 @@
         </RadzenLineSeries>
         <RadzenLineSeries Smooth="true" Data="@ViewModel.DataPointsPredicted" CategoryProperty="Date" Title="Forecasts" ValueProperty="Value">
             <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
-            <RadzenSeriesDataLabels Visible="true" />ShowTrainedModel
+            <RadzenSeriesDataLabels Visible="true" />
         </RadzenLineSeries>
-        <RadzenLineSeries Smooth="true" Data="@ViewModel.RegressionTrainedModelDataOutput" CategoryProperty="Date" Title="TrainedModel" ValueProperty="Value">
+        <RadzenLineSeries Smooth="true" Data="@ViewModel.RegressionTrainedModelDataOutput" Visible="@ViewModel.ShowTrainedModel" CategoryProperty="Date" Title="TrainedModel" ValueProperty="Value">
             <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Circle" />
-            <RadzenSeriesDataLabels Visible="@ViewModel.ShowTrainedModel" />
+            <RadzenSeriesDataLabels Visible="@ViewModel.ShowDataLabels" />
             <RadzenCategoryAxis Padding="20" />
         </RadzenLineSeries>
         <RadzenValueAxis>
@@ -196,7 +196,8 @@
                 <RadzenLabel Text="ShowTrainedModel" Component="dataLabels" />
                 <RadzenLabel Style="max-width: 350px" Text="There are parameters for every trainer. Please read Microsoft docs " />
 
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastByLinearRegression)" Text="LEARN & PREDICT !" />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainLinearRegression)" Text="TRAINING !" />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDatabasedOnTrainedRegressionModel)" Text="PREDICT !" />
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
@@ -250,13 +251,29 @@
         }
     }
 
-    private async Task ForecastByLinearRegression()
+    private async Task TrainLinearRegression()
+    {
+        ViewModel.SetUpDefaults();
+        try
+        {
+            // ViewModel.DataPointsPredicted = await MlForecaster.TrainLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.ValueForMl),
+            // ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredict, ViewModel.Data);
+            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedRegressionModel) = await MlForecaster.TrainLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.ValueForMl), ViewModel.Data);
+        }
+        catch (Exception e)
+        {
+            ViewModel.ErrorOccuredText = e.Message + e.InnerException?.Message;
+            ViewModel.ShowError = true;
+        }
+    }
+
+    private async Task ForecastDatabasedOnTrainedRegressionModel()
     {
         ViewModel.ShowError = false;
         try
         {
-            ViewModel.DataPointsPredicted = await MlForecaster.ForecastByLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.ValueForMl),
-                ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredict, ViewModel.Data);
+            ViewModel.DataPointsPredicted = await MlForecaster.ForerecastByLinearRegression(
+                ViewModel.TrainedRegressionModel, ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredict);
         }
         catch (Exception e)
         {
