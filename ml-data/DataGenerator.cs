@@ -49,7 +49,7 @@
 
             for (int i = 0; i < howMany; i++)
             {
-                if (i > 10 && i % 8 == 0)
+                if (i > 10 && i % 8 == 0 && linearDiscrepancy != 0)
                 {
                     //some periodic discrepancies added (modulo 8)
                     data.Add(new DateData(startingDate.AddDays(7 * i), new Random().Next((int)(i - i * linearDiscrepancy), (int)(i + i * linearDiscrepancy))));
@@ -60,11 +60,14 @@
                 }
             }
 
-            //lets add even bigger 5 discrepancies :
-            for (int i = 0; i < 5; i++)
+            if (linearDiscrepancy != 0)
             {
-                var index = new Random().Next(0, howMany - 1);
-                data[index] = (new DateData(data[index].Date, data[index].Value * 5)); //howBigDiscrepancyIs - lets say fixed 5 times
+                //lets add even bigger 5 discrepancies :
+                for (int i = 0; i < 5; i++)
+                {
+                    var index = new Random().Next(0, howMany - 1);
+                    data[index] = (new DateData(data[index].Date, data[index].Value * 5)); //howBigDiscrepancyIs - lets say fixed 5 times
+                }
             }
             return data;
         }
@@ -96,11 +99,29 @@
 
     public class DateData(DateTime d, int v)
     {
+        public DateData(float year, float month, float day) : this(new DateTime((int)year, (int)month, (int)day), 0)
+        {
+
+        }
+
         public DateTime Date { get; } = d;
         public int Value { get; } = v;
         public float ValueForMl
         {
-            get { return (float)Value; }
+            get { return (float)Value; } // Actually, this should be done via columnTransformer, not here in input model
+        }
+
+        public float YearForMl
+        {
+            get { return (float)Date.Year; }
+        }
+        public float MonthForMl
+        {
+            get { return (float)Date.Month; }
+        }
+        public float DayForMl
+        {
+            get { return (float)Date.Day; }
         }
     }
 }

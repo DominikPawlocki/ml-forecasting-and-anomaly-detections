@@ -18,4 +18,12 @@ namespace ml_engine.Forecasting
         [VectorType(3)]
         public float[] ConfidenceUpperBounds { get; set; }
     }
+
+    public class MlLinearRegressionDateValuePredition
+    {
+        public DateTime Date;
+        public float DateEncoded;
+        [ColumnName("Score")]
+        public float Value;
+    }
 }

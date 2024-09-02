@@ -13,6 +13,11 @@ namespace ml_ui.Services
                                                                        int serLen,
                                                                        int trnSize,
                                                                        IEnumerable<DateIntegerDataViewModel> dataSet);
+        Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastByLinearRegression(string regressionLearnerName,
+                                                                                         string detectionByColumnName,
+                                                                                         DateTime startingDate,
+                                                                                         int howManyDataPointsToPredict,
+                                                                                         IEnumerable<DateIntegerDataViewModel> dataSet);
     }
 
     public class MlForecastingService : IMlForecastingService
@@ -55,6 +60,39 @@ namespace ml_ui.Services
                         ConfidenceUpperBound = forecast.ConfidenceUpperBounds[i],
                     });
                 }
+                return result;
+            });
+        }
+
+        public async Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastByLinearRegression(string regressionLearnerName,
+                                                                                                      string detectionByColumnName,
+                                                                                                      DateTime pointsToBePredictedStartDate,
+                                                                                                      int howManyDataPointsToPredict,
+                                                                                                      IEnumerable<DateIntegerDataViewModel> dataSet)
+        {
+
+            if (dataSet == null || !dataSet.Any())
+            {
+                return [];
+            }
+            return await Task.Run(() =>
+            {
+                var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
+                if (dataSetForMl is null)
+                    return Enumerable.Empty<DateIntegerForecasterDataViewModel>();
+
+                var toBeRunAgainstModel = new List<DateData>();
+                for (var i = 0; i < howManyDataPointsToPredict; i++)
+                {
+                    pointsToBePredictedStartDate = pointsToBePredictedStartDate.AddDays(i * 7); //we have a weekly data, however it doesnt have to be like this, we can predict any date in the model
+                    toBeRunAgainstModel.Add(new DateData(pointsToBePredictedStartDate, 0)); //this 0 is to be predicted (run against trained model)
+                }
+
+                var forecast = _forecaster.ForecastByLinearRegression(regressionLearnerName, detectionByColumnName, toBeRunAgainstModel, dataSetForMl);
+                //var result = new List<DateIntegerForecasterDataViewModel>(howManyDataPointsToPredict);
+                var result = _mapper.Map<IEnumerable<DateIntegerForecasterDataViewModel>>(forecast);
+
+
                 return result;
             });
         }

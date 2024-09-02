@@ -41,6 +41,8 @@ namespace ml_engine.AnomalyDetections
                     ConvertType(new[] {
                       new InputOutputColumnPair(columnNameToDoubleTransformer(detectionByColumnName), detectionByColumnName)
                     }, DataKind.Double);
+
+            //here, we dont train a model, cause its a numeric method, not real ML.
             ITransformer tansformedModel = estimatorChainTypeConversion.Fit(CreateEmptyDataView<T>());
             var newIDataView = tansformedModel.Transform(dataView);
 

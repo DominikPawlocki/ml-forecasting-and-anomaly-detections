@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using ml_data;
+using ml_engine.Forecasting;
 using ml_ui.ViewModels;
 
 namespace ml_ui.AutoMapper
@@ -13,6 +14,7 @@ namespace ml_ui.AutoMapper
             {
                 return new DateData(src.Date, src.Value);
             });
+            CreateMap<MlLinearRegressionDateValuePredition, DateIntegerForecasterDataViewModel>();
         }
     }
 }

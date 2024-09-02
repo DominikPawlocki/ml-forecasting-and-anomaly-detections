@@ -2,12 +2,17 @@
 {
     public class ForecastingViewModel : ViewModelBase
     {
-        public IEnumerable<DateIntegerForecasterDataViewModel>? DataPointsPredicted { get; set; }
+        public IEnumerable<DateIntegerForecasterDataViewModel>? DataPointsPredicted { get; set; } = [];
+        public IEnumerable<DateIntegerForecasterDataViewModel>? RegressionTrainedModelDataOutput { get; set; } = [];
 
         public int SeriesLenght { get; set; }
 
-        public int WindowSize { get; set; }
-        public int TrainSize { get; set; }
+        public int WindowSize { get; set; } //SSA
+        public int TrainSize { get; set; } //SSA
+
+        public bool ShowTrainedModel { get; set; }
+
+        public string RegressionLearner { get; set; } = "SDCA";
 
         private void ClearModel()
         {
