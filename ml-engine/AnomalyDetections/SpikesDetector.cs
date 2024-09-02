@@ -72,7 +72,10 @@ namespace ml_engine.AnomalyDetections
             Console.WriteLine($"=============== Detect spikes with pattern IId ===============");
             var estimatorChain = new EstimatorChain<ITransformer>();
 
-            return estimatorChain.Append(estimator: CreateIidSpikeEstimator(pvalHstLenght, confidence, detectionByColumnName, side));
+            return estimatorChain.Append(MlContext.Transforms.Conversion.ConvertType(new[] {
+                      new InputOutputColumnPair(detectionByColumnName+"Single", detectionByColumnName)
+                    }, DataKind.Single))
+                .Append(estimator: CreateIidSpikeEstimator(pvalHstLenght, confidence, detectionByColumnName + "Single", side));
         }
 
         private EstimatorChain<ITransformer> GetSsaSpikesEstimator(int pvalHstLenght,
@@ -84,7 +87,10 @@ namespace ml_engine.AnomalyDetections
         {
             Console.WriteLine($"=============== Detect spikes with pattern Ssa ===============");
             var estimatorChain = new EstimatorChain<ITransformer>();
-            return estimatorChain.Append(estimator: CreateSsaSpikeEstimator(pvalHstLenght, tWinSize, sWinSize, confidence, detectionByColumnName, side));
+            return estimatorChain.Append(MlContext.Transforms.Conversion.ConvertType(new[] {
+                      new InputOutputColumnPair(detectionByColumnName+"Single", detectionByColumnName)
+                    }, DataKind.Single))
+            .Append(estimator: CreateSsaSpikeEstimator(pvalHstLenght, tWinSize, sWinSize, confidence, detectionByColumnName + "Single", side));
         }
 
         private IEstimator<ITransformer> CreateIidSpikeEstimator(int pvalHstLenght,

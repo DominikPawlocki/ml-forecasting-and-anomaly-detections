@@ -275,7 +275,7 @@
                                                                        ViewModel.Spikes_SeasonalityWindowSize,
                                                                        ViewModel.Spikes_Confidence,
                                                                        ViewModel.Data,
-                                                                       nameof(ml_data.DateData.ValueForMl));
+                                                                       nameof(ml_data.DateData.Value));
         }
         catch (Exception e)
         {
@@ -292,7 +292,7 @@
             ViewModel.AnomaliesDetected = await MlSpikesAnomaliesChangePointsDetector.DetectAnomalies(ViewModel.Anomalies_Threshold, ViewModel.Anomalies_BatchSize,
                                                             ViewModel.Anomalies_Sensitivity, ViewModel.Anomalies_DetectMode,
                                                             ViewModel.Anomalies_Period, ViewModel.Anomalies_DeseasonalityMode,
-                                                            ViewModel.Data, nameof(ml_data.DateData.ValueForMl));
+                                                            ViewModel.Data, nameof(ml_data.DateData.Value));
         }
         catch (Exception e)
         {

@@ -84,7 +84,6 @@ namespace ml_ui.Services
                 }
 
                 var forecast = _forecaster.ForecastByLinearRegression(trainedRegressionModel, toBeRunAgainstModel);
-                //var result = new List<DateIntegerForecasterDataViewModel>(howManyDataPointsToPredict);
                 var result = _mapper.Map<IEnumerable<DateIntegerForecasterDataViewModel>>(forecast);
 
                 return result;
@@ -100,13 +99,13 @@ namespace ml_ui.Services
 
             if (dataSet == null || !dataSet.Any())
             {
-                return (Enumerable.Empty<DateIntegerForecasterDataViewModel>(), null);
+                return ([], null);
             }
             return await Task.Run(() =>
             {
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
                 if (dataSetForMl is null)
-                    return (Enumerable.Empty<DateIntegerForecasterDataViewModel>(), null);
+                    return ([], null);
 
                 var modelOutput = _forecaster.TrainModelAndReturnLearntOutput(regressionLearnerName, detectionByColumnName, dataSetForMl);
                 var result = _mapper.Map<IEnumerable<DateIntegerForecasterDataViewModel>>(modelOutput.trainedModelDataOutput);

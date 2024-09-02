@@ -3,7 +3,9 @@ using Microsoft.ML.Data;
 using Microsoft.ML.Trainers;
 using Microsoft.ML.Transforms.TimeSeries;
 using ml_data;
-using System.Globalization;
+using System.Drawing;
+using System.Xml.Linq;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ml_engine.Forecasting
 {
@@ -24,6 +26,13 @@ namespace ml_engine.Forecasting
             TrainModelAndReturnLearntOutput(string regressionLearnerName, string detectionByColumnName, IEnumerable<DateData> allDataPointsUsedFortraining);
 
     }
+
+    //public class NewDateData(DateTime d, int v)
+    //{
+    //    public DateTime Date { get; } = d;
+    //    public int Value { get; } = v;
+    //    public float ValueSingle { get { return (float)v; } }
+    //}
 
     public class Forecaster : IMlForecaster
     {
@@ -70,7 +79,7 @@ namespace ml_engine.Forecasting
             var result = new List<MlLinearRegressionDateValuePredition>(dataPointsToBePredictedByModel.Count());
             foreach (var dataPoint in dataPointsToBePredictedByModel)
             {
-                var forecast = predEngine.Predict(new DateData(dataPoint.YearForMl, dataPoint.MonthForMl, dataPoint.DayForMl)); // ,0 -> this value is to be predicted for given date
+                var forecast = predEngine.Predict(dataPoint); // ,0 -> this value is to be predicted for given date
                 result.Add(forecast);
             }
             return result;
@@ -99,15 +108,19 @@ namespace ml_engine.Forecasting
                                                   bool isAdaptive,
                                                   float confidence) where T : class
         {
-            var forecastChain = GetForecastingSsaPipeline(detectionByColumnName, windowSize, seriesLength, trainSize, horizon, isAdaptive, confidence);
+            var forecastChain = GetForecastingSsaPipeline(detectionByColumnName + "Single", windowSize, seriesLength, trainSize, horizon, isAdaptive, confidence);
 
-            return PredictBySsa<T>(data, forecastChain);
+            var estimatorChain = MlContext.Transforms.Conversion
+                .ConvertType(new[] { new InputOutputColumnPair(detectionByColumnName + "Single", detectionByColumnName) }, DataKind.Single)
+                    .Append(MlContext.Transforms.Concatenate("Features", detectionByColumnName + "Single")) //needs vector of Single
+                    .AppendCacheCheckpoint(MlContext)
+                .Append(estimator: forecastChain);
+
+            return PredictBySsa<T>(data, estimatorChain);
         }
 
         private (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
-            ForecastByRegression(string regressionLearnerName, IDataView data,//IEnumerable<DateData> dataPointsToBePredictedByModel,
-                                                                                       string detectionByColumnName,
-                                                                                       IEnumerable<DateData> driverData)
+            ForecastByRegression(string regressionLearnerName, IDataView data, string detectionByColumnName, IEnumerable<DateData> driverData)
         {
             // STEP 2: Common data process configuration with pipeline data transformations
             //var dataProcessPipeline = MlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: nameof(TaxiTrip.FareAmount))
@@ -120,30 +133,11 @@ namespace ml_engine.Forecasting
             //                            .Append(mlContext.Transforms.Concatenate("Features", "VendorIdEncoded", "RateCodeEncoded", "PaymentTypeEncoded", nameof(TaxiTrip.PassengerCount)
             //                            , nameof(TaxiTrip.TripTime), nameof(TaxiTrip.TripDistance)));
 
-            Action<System.String, DateTime> mapping = (input, output) =>
-            {
-                const string DATETIME_FORMAT = "dd/MM/yyyy";
-                //output.Col1 = input.Col1;
-
-                if (DateTime.TryParseExact(input,
-                                            DATETIME_FORMAT,
-                                            CultureInfo.InvariantCulture,
-                                            DateTimeStyles.None, out var result))
-                    output = result;
-            };
-
-
-            // It needs am additional column usually called 'Feature' 
-            Func<string, string> columnNameToSingleTransformer = (string colName) => ($"{colName}Single");
+            //Func<string, string> columnNameToSingleTransformer = (string colName) => ($"{colName}Single");
 
             //var dataProcessPipeline = MlContext.Transforms.CopyColumns(outputColumnName: detectionByColumnName, inputColumnName: detectionByColumnName)
-
             //                            //.Append(MlContext.Transforms.Conversion.ConvertType(new[] {
             //                            //    new InputOutputColumnPair("DateEncoded", inputColumnName: nameof(DateData.Date))}, DataKind.Single))
-            //                            .Append(MlContext.Transforms.CopyColumns(nameof(DateData.YearForMl), nameof(DateData.YearForMl)))
-            //                            .Append(MlContext.Transforms.CopyColumns(nameof(DateData.MonthForMl), nameof(DateData.MonthForMl)))
-            //                            .Append(MlContext.Transforms.CopyColumns(nameof(DateData.DayForMl), nameof(DateData.DayForMl)))
-
 
             //                            //.Append(MlContext.Transforms.CopyColumns(outputColumnName: "DateEncoded", inputColumnName: nameof(Date.Date)))
             //                            //.Append(MlContext.Transforms.NormalizeMeanVariance(outputColumnName: "DateEncodedV", "DateEncoded"))
@@ -152,27 +146,55 @@ namespace ml_engine.Forecasting
             //                            .Append(MlContext.Transforms.Concatenate("Features", nameof(DateData.YearForMl), nameof(DateData.MonthForMl), nameof(DateData.DayForMl)))
             //                            .AppendCacheCheckpoint(MlContext); // Use in-memory cache for small/medium datasets to lower training time. Do NOT use it (remove .AppendCacheCheckpoint()) when handling very large datasets.
 
-            var dataProcessPipeline = MlContext.Transforms.
-                Concatenate("Features", nameof(DateData.YearForMl), nameof(DateData.MonthForMl), nameof(DateData.DayForMl))
-                            .AppendCacheCheckpoint(MlContext); // Use in-memory cache for small/medium datasets to lower training time. Do NOT use it (remove .AppendCacheCheckpoint()) when handling very large datasets.
+            //var dataProcessPipeline = MlContext.Transforms.
+            //    NormalizeMeanVariance(outputColumnName: "nYearForMl", nameof(DateData.YearForMl))
+            //    .Append(MlContext.Transforms.NormalizeMeanVariance(outputColumnName: "nMonthForMl", nameof(DateData.MonthForMl)))
+            //    .Append(MlContext.Transforms.NormalizeMeanVariance(outputColumnName: "nDayForMl", nameof(DateData.DayForMl)))
+            //    .Append(MlContext.Transforms.Concatenate("Features", "nYearForMl", "nMonthForMl", "nDayForMl"))
+            //                .AppendCacheCheckpoint(MlContext); // Use in-memory cache for small/medium datasets to lower training time. Do NOT use it (remove .AppendCacheCheckpoint()) when handling very large datasets.
 
-            var (name, trainerChoosen) = FetchAllRegressionLearners(labelColumnName: detectionByColumnName, featureColumnName: "Features").FirstOrDefault(r => r.name == regressionLearnerName);
+            //        var dataProcessPipeline = MlContext.Transforms.
+            //Concatenate("Features", nameof(DateData.YearForMl), nameof(DateData.MonthForMl), nameof(DateData.DayForMl))
+            //.AppendCacheCheckpoint(MlContext);
+
+            //------------ works good in general ---------
+            //var dataProcessPipeline = MlContext.Transforms.Conversion
+            //    .ConvertType(new[] { new InputOutputColumnPair(detectionByColumnName + "Single", detectionByColumnName) }, DataKind.Single)
+            //    .Append(MlContext.Transforms.Conversion.ConvertType(new[] { new InputOutputColumnPair("DateEncoded", inputColumnName: nameof(DateData.Date)) }, DataKind.Single))
+            //    .Append(MlContext.Transforms.Concatenate("Features", "DateEncoded")) //needs vector of Single
+            //    .AppendCacheCheckpoint(MlContext);
+            //-----------------
+
+            var dataProcessPipeline = MlContext.Transforms.Conversion
+                .ConvertType(new[] { new InputOutputColumnPair(detectionByColumnName + "Single", detectionByColumnName) }, DataKind.Single)
+                .Append(MlContext.Transforms.Concatenate("Features", nameof(DateData.A))) //needs vector of Single
+                .AppendCacheCheckpoint(MlContext);
+
+            //------ was good for SDCA --------------
+            //var dataProcessPipeline = MlContext.Transforms.Conversion
+            //    .ConvertType(new[] { new InputOutputColumnPair(detectionByColumnName + "Single", detectionByColumnName) }, DataKind.Single)
+            //    .Append(MlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "Features", inputColumnName: nameof(DateData.Date)))
+            //    .AppendCacheCheckpoint(MlContext);
+            //------------------
+
+            var (name, trainerChoosen) = FetchAllRegressionLearners(labelColumnName: detectionByColumnName + "Single", featureColumnName: "Features").FirstOrDefault(r => r.name == regressionLearnerName);
 
             var trainingPipeline = dataProcessPipeline.Append(trainerChoosen);
 
             // Train.
             var trainedModel = trainingPipeline.Fit(data);
 
-            //-------------- model evaluation -------------------
             var predictions = trainedModel.Transform(data);
+            //-------------- model evaluation -------------------
             //var metrics = MlContext.Regression.Evaluate(predictions, nameof(DateData.ValueForMl));
             //-------------------------------------------------
             //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
             var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePredition>(trainedModel);
+
             var result = new List<MlLinearRegressionDateValuePredition>(driverData.Count());
             foreach (var dataPoint in driverData)
             {
-                var forecast = predEngine.Predict(new DateData(dataPoint.YearForMl, dataPoint.MonthForMl, dataPoint.DayForMl)); // ,0 -> this value is to be predicted for given date
+                var forecast = predEngine.Predict(dataPoint); // ,0 -> this value is to be predicted for given date
                 result.Add(forecast);
             }
 
@@ -180,12 +202,12 @@ namespace ml_engine.Forecasting
         }
 
         private SsaForecastingEstimator GetForecastingSsaPipeline(string detectionByColumnName,
-                                                               int windowSize,
-                                                               int seriesLength,
-                                                               int trainSize,
-                                                               int horizon,
-                                                               bool isAdaptive,
-                                                               float confidence)
+                                                                    int windowSize,
+                                                                    int seriesLength,
+                                                                    int trainSize,
+                                                                    int horizon,
+                                                                    bool isAdaptive,
+                                                                    float confidence)
         {
             // Instantiate the forecasting model. After https://github.com/dotnet/machinelearning-samples/blob/main/samples/csharp/end-to-end-apps/Forecasting-Sales/README.md
             return MlContext.Forecasting.ForecastBySsa(
@@ -245,16 +267,23 @@ namespace ml_engine.Forecasting
         }
 
         private MlForecastResult PredictBySsa<T>(IDataView dataFor,
-                                               SsaForecastingEstimator forecastingModelChain,
-                                               bool ignoreMissingColumns = true) where T : class
+                                                EstimatorChain<SsaForecastingTransformer> forecastingModelChain,
+                                                bool ignoreMissingColumns = true) where T : class
         {
             // Train.
             var transformer = forecastingModelChain.Fit(dataFor);
 
-            // Forecast next X (same like series amount) values.
+            var predictions = transformer.Transform(dataFor);
+
             var forecastEngine = transformer.CreateTimeSeriesEngine<T, MlForecastResult>(MlContext, ignoreMissingColumns);
 
-
+            //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
+            //var result = new List<MlLinearRegressionDateValuePredition>(driverData.Count());
+            //foreach (var dataPoint in driverData)
+            //{
+            //    var forecast = forecastEngine.Predict(dataPoint); // ,0 -> this value is to be predicted for given date
+            //    result.Add(forecast);
+            //}
 
             var forecast = forecastEngine.Predict();
             return forecast;

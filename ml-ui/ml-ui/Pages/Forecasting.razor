@@ -33,11 +33,11 @@
             <h1><RadzenBadge BadgeStyle="BadgeStyle.Info" Text="RANDOM" /></h1>
 
             <RadzenLabel Text="Upper bound" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="0" Max="10000" @bind-Value=@ViewModel.RandomUpperBound Style="width: 200px;" />
+            <RadzenSlider Name="valueSlider" Min="0" Max="1000" @bind-Value=@ViewModel.RandomUpperBound Style="width: 200px;" />
             <RadzenLabel Text="@ViewModel.RandomUpperBound.ToString()" Component="valueSlider" />
 
             <RadzenLabel Text="Lower bound" Component="valueSlider" />
-            <RadzenSlider Name="valueSlider" Min="-10000" Max="0" @bind-Value=@ViewModel.RandomLowerBound Style="width: 200px;" />
+            <RadzenSlider Name="valueSlider" Min="-1000" Max="0" @bind-Value=@ViewModel.RandomLowerBound Style="width: 200px;" />
             <RadzenLabel Text="@ViewModel.RandomLowerBound.ToString()" Component="valueSlider" />
 
 
@@ -124,7 +124,7 @@
                 </RadzenCard>
 
                 <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="1" Max="7" @bind-Value=@howManyFutureWeeksToPredict Style="width: 200px;" />
+                <RadzenSlider Name="valueSlider" Min="1" Max="56" @bind-Value=@howManyFutureWeeksToPredict Style="width: 200px;" />
                 <RadzenLabel Text="@howManyFutureWeeksToPredict.ToString()" Component="valueSlider" />
 
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Predict)" Text="PREDICT !" />
@@ -153,25 +153,15 @@
             <div>
                 <div>
                     A supervised machine learning task that is used to predict the value of the label from a set of related features. The label can be of any real value and is not from a finite set of values as in classification tasks. Regression algorithms model the dependency of the label on its related features to determine how the label will change as the values of the features are varied.
-                    You can train a regression model using the following algorithms:
-
-                    LbfgsPoissonRegressionTrainer
-                    LightGbmRegressionTrainer
-                    SdcaRegressionTrainer
-                    OlsTrainer
-                    OnlineGradientDescentTrainer
-                    FastTreeRegressionTrainer
-                    FastTreeTweedieTrainer
-                    FastForestRegressionTrainer
-                    GamRegressionTrainer
+                    You can train a regression model using the following algorithms
                 </div>
             </div>
         </RadzenCard>
         <RadzenCard>
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Hor Gap="0.5rem">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Hor Gap="0.5rem">
                 <h1><RadzenBadge BadgeStyle="BadgeStyle.Dark" Text="Predict future" /></h1>
                 <RadzenCard>
-                    <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Stretch" Gap="0.5rem">
+                    <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="0.5rem">
                         <RadzenLabel Text="Regression learner/algorithm" Component="RegressionLearnerAlgorithm_radio" />
                         <RadzenRadioButtonList Name="RegressionLearnerAlgorithm_radio" @bind-Value=@ViewModel.RegressionLearner TValue="string" Orientation="Orientation.Vertical">
                             <Items>
@@ -179,22 +169,26 @@
                                 <RadzenRadioButtonListItem Text="Poisson" Value=@("Poisson") TValue="string" />
                                 <RadzenRadioButtonListItem Text="Stochastic Dual Coordinate Ascent (SDCA)" Value=@("SDCA") TValue="string" />
                                 <RadzenRadioButtonListItem Text="Tweedie distributions using decision tree" Value=@("FastTreeTweedie") TValue="string" />
+                                <RadzenRadioButtonListItem Text="Gradient Boosting Machines (GBM)" Value=@("GBM") TValue="string" />
+                                <RadzenRadioButtonListItem Text="Ordinary Least Squares (OLS) linear regression" Value=@("OLS") TValue="string" />
+                                <RadzenRadioButtonListItem Text="Online Gradient Descent (OGD)" Value=@("ODG") TValue="string" />
+                                <RadzenRadioButtonListItem Text="Generalized Additive Models (GAM)" Value=@("GAM") TValue="string" />
+                                <RadzenRadioButtonListItem Text="Random forests" Value=@("RandomForests") TValue="string" />
                             </Items>
                         </RadzenRadioButtonList>
+                        <RadzenLabel Style="max-width: 350px" Text="There are parameters for every trainer. Please read Microsoft docs " />
                     </RadzenStack>
                 </RadzenCard>
-
                 <RadzenLabel Text="DatesOfPrediction" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="-400" Max="400" @bind-Value=@preditionWeeksRelativeToDataSetEnd Style="width: 200px;" />
+                <RadzenSlider Name="valueSlider" Min="-200" Max="200" @bind-Value=@preditionWeeksRelativeToDataSetEnd Style="width: 200px;" />
                 <RadzenLabel Text="@preditionWeeksRelativeToDataSetEnd.ToString()" Component="valueSlider" />
 
                 <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="1" Max="7" @bind-Value=@howManyFutureWeeksToPredict Style="width: 200px;" />
+                <RadzenSlider Name="valueSlider" Min="1" Max="56" @bind-Value=@howManyFutureWeeksToPredict Style="width: 200px;" />
                 <RadzenLabel Text="@howManyFutureWeeksToPredict.ToString()" Component="valueSlider" />
 
                 <RadzenCheckBox @bind-Value="@ViewModel.ShowTrainedModel" Name="dataLabels"></RadzenCheckBox>
                 <RadzenLabel Text="ShowTrainedModel" Component="dataLabels" />
-                <RadzenLabel Style="max-width: 350px" Text="There are parameters for every trainer. Please read Microsoft docs " />
 
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainLinearRegression)" Text="TRAINING !" />
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDatabasedOnTrainedRegressionModel)" Text="PREDICT !" />
@@ -242,7 +236,7 @@
         ViewModel.ShowError = false;
         try
         {
-            ViewModel.DataPointsPredicted = await MlForecaster.Forecast(nameof(ml_data.DateData.ValueForMl), howManyFutureWeeksToPredict, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
+            ViewModel.DataPointsPredicted = await MlForecaster.Forecast(nameof(ml_data.DateData.Value), howManyFutureWeeksToPredict, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
         }
         catch (Exception e)
         {
@@ -258,7 +252,7 @@
         {
             // ViewModel.DataPointsPredicted = await MlForecaster.TrainLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.ValueForMl),
             // ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredict, ViewModel.Data);
-            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedRegressionModel) = await MlForecaster.TrainLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.ValueForMl), ViewModel.Data);
+            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedRegressionModel) = await MlForecaster.TrainLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.Value), ViewModel.Data);
         }
         catch (Exception e)
         {

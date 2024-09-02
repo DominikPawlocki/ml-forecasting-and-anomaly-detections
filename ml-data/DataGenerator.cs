@@ -84,7 +84,6 @@
                 if (i > 10 && i % 40 == 0)
                 {
                     var d = new Random().Next((int)(i - i * sinusDiscrepancy), (int)(i + i * sinusDiscrepancy));
-                    //data.Add(new DateData(startingDate.AddDays(7 * i), (int)(Math.Sin((i * (Math.PI)) / 180) * valueHigherBound * d)));
                     data.Add(new DateData(startingDate.AddDays(7 * i), (int)(Math.Sin((d * (Math.PI)) / 180) * valueHigherBound + valueHigherBound)));
                 }
                 else
@@ -99,29 +98,16 @@
 
     public class DateData(DateTime d, int v)
     {
-        public DateData(float year, float month, float day) : this(new DateTime((int)year, (int)month, (int)day), 0)
-        {
-
-        }
-
         public DateTime Date { get; } = d;
         public int Value { get; } = v;
-        public float ValueForMl
+        public float A
         {
-            get { return (float)Value; } // Actually, this should be done via columnTransformer, not here in input model
-        }
-
-        public float YearForMl
-        {
-            get { return (float)Date.Year; }
-        }
-        public float MonthForMl
-        {
-            get { return (float)Date.Month; }
-        }
-        public float DayForMl
-        {
-            get { return (float)Date.Day; }
+            get
+            {
+                //return ((DateTimeOffset)Date).ToUnixTimeSeconds();
+                var timeSpan = (Date - new DateTime(2023, 1, 1, 0, 0, 0));
+                return (long)timeSpan.TotalDays;
+            }
         }
     }
 }
