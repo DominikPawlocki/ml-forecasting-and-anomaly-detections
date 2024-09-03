@@ -107,25 +107,36 @@
                     <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="0.5rem">
                         <RadzenLabel Text="Window size" Component="valueSlider" />
                         @* 'The input size for training should be greater than twice the window size.' *@
-                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.WindowSize" Style="width: 200px;" />
-                        <RadzenLabel Text="@ViewModel.WindowSize.ToString()" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.SSAWindowSize" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.SSAWindowSize.ToString()" Component="valueSlider" />
 
                         <RadzenLabel Text="Series lenght" Component="valueSlider" />
                         @* 'The series length should be greater than the window size.' *@
-                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.SeriesLenght" Style="width: 200px;" />
-                        <RadzenLabel Text="@ViewModel.SeriesLenght.ToString()" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="3" Max="@(ViewModel.Data.Count())" @bind-Value="@ViewModel.SSASeriesLenght" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.SSASeriesLenght.ToString()" Component="valueSlider" />
 
                         <RadzenLabel Text="Train size" Component="valueSlider" />
-                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.TrainSize" Style="width: 200px;" />
-                        <RadzenLabel Text="@ViewModel.TrainSize.ToString()" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.SSATrainSize" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.SSATrainSize.ToString()" Component="valueSlider" />
 
-                        <RadzenLabel Style="max-width: 350px" Text="There are more parameters like: 'isAdaptive', 'shouldStabilize', 'discountFactor', 'rank' etc... Please read Microsoft docs " />
+                        @* Change=@(args =>OnChange(args, "Switch")) *@
+                        <RadzenLabel Text="IsAdaptive" Component="isAdaptiveToggle" />
+                        <RadzenSwitch Name="isAdaptiveToggle" @bind-Value=@ViewModel.SSAIsAdaptive InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
+
+                        <RadzenLabel Text="Confidence" Component="valueSlider" />
+                        <RadzenSlider Name="valueSlider" Min="0" Max="100" @bind-Value="@ViewModel.SSAConfidence" Style="width: 200px;" />
+                        <RadzenLabel Text="@ViewModel.SSAConfidence.ToString()" Component="valueSlider" />
+
+                        <RadzenLabel Style="max-width: 350px" Text="There are more parameters like: 'discountFactor', 'rankSelectionMethod', 'rank', 'maxRank', 'shouldStabilize', 'shouldMaintainInfo', maxGrowth', 'variableHorizon' etc... Please read Microsoft docs " />
                     </RadzenStack>
                 </RadzenCard>
 
                 <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
                 <RadzenSlider Name="valueSlider" Min="1" Max="300" @bind-Value=@ViewModel.HowManyFutureWeeksToPredictSSA Style="width: 200px;" />
                 <RadzenLabel Text="@ViewModel.HowManyFutureWeeksToPredictSSA.ToString()" Component="valueSlider" />
+
+                <RadzenCheckBox @bind-Value="@ViewModel.ShowTrainedModel" Name="dataLabels"></RadzenCheckBox>
+                <RadzenLabel Text="ShowTrainedModel" Component="dataLabels" />
 
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainSSA)" Text="TRAINING !" />
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDataBasedOnTrainedSSAModel)" Text="PREDICT !" />
@@ -191,9 +202,10 @@
 
                 <RadzenCheckBox @bind-Value="@ViewModel.ShowTrainedModel" Name="dataLabels"></RadzenCheckBox>
                 <RadzenLabel Text="ShowTrainedModel" Component="dataLabels" />
-
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainLinearRegression)" Text="TRAINING !" />
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDataBasedOnTrainedRegressionModel)" Text="PREDICT !" />
+                <RadzenStack>
+                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainLinearRegression)" Text="TRAINING !" />
+                    <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDataBasedOnTrainedRegressionModel)" Text="PREDICT !" />
+                </RadzenStack>
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
@@ -208,6 +220,9 @@
         if (ViewModel.Data == null || !ViewModel.Data.Any())
         {
             await GenerateNewRandomData();
+            (ViewModel.SSAWindowSize, ViewModel.SSATrainSize, ViewModel.SSASeriesLenght, ViewModel.SSAConfidence) =
+                ViewModel.SetDefaultModelTrainingParametersAccordingtoDataSet();
+
         }
     }
 
@@ -235,7 +250,7 @@
         ViewModel.SetUpDefaults();
         try
         {
-            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedSSAModel) = await MlForecaster.TrainSSA(nameof(ml_data.DateData.Value), ViewModel.HowManyFutureWeeksToPredictSSA, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
+            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedSSAModel) = await MlForecaster.TrainSSA(nameof(ml_data.DateData.Value), ViewModel.HowManyFutureWeeksToPredictSSA, ViewModel.SSAWindowSize, ViewModel.SSASeriesLenght, ViewModel.SSATrainSize, ViewModel.SSAIsAdaptive, ViewModel.SSAConfidence, ViewModel.Data);
         }
         catch (Exception e)
         {

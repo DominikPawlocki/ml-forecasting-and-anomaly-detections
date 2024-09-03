@@ -11,10 +11,11 @@ namespace ml_ui.ViewModels
         public TransformerChain<ITransformer>? TrainedRegressionModel { get; set; }
         public TransformerChain<SsaForecastingTransformer>? TrainedSSAModel { get; set; }
 
-        public int SeriesLenght { get; set; }
-
-        public int WindowSize { get; set; } //SSA
-        public int TrainSize { get; set; } //SSA
+        public int SSASeriesLenght { get; set; }
+        public int SSAWindowSize { get; set; }
+        public int SSATrainSize { get; set; }
+        public bool SSAIsAdaptive { get; set; }
+        public int SSAConfidence { get; set; }
 
         public bool ShowTrainedModel { get; set; }
 
@@ -35,28 +36,27 @@ namespace ml_ui.ViewModels
         {
             ShowError = false;
             ClearModel();
-            (WindowSize, TrainSize, SeriesLenght) = SetDefaultModelTrainingParametersAccordingtoDataSet();
         }
 
-        private (int winSize, int trnSize, int serLen) SetDefaultModelTrainingParametersAccordingtoDataSet()
+        internal (int winSize, int trnSize, int serLen, int conf) SetDefaultModelTrainingParametersAccordingtoDataSet()
         {
             // this values are very important cause its defines how algorithm works. In the method GetForecastingPipeline you can find it explained.
             int trnSize = Data.Count();       //'The input size for training should be greater than twice the window size.'
             int serLen = Data.Count() / 8;    //'The series length should be greater than the window size.
             int winSize = serLen - 2; //as minumum WindowSize is 2, then it makes that minumum actualData is 32.
 
-            //Trying to load 2 years of data by default. However it might be that there is no so much data available, or there are different cases
+            //It might be that there is no so much data available, or there are different cases
             //In that case, the parameters has to be adjusted cause it will predict 0 or gives exception
             return Data.Count() switch
             {
-                0 => (0, 0, 0),
+                0 => (0, 0, 0, 98),
                 // --> we have not much data and default params wouldnt work. let adjust
-                int a when a < 8 => (2, trnSize, 3),
+                int a when a < 8 => (2, trnSize, 3, 98),
                 // --> we have not much data and default params wouldnt work. let adjust
-                int a when a < 20 => (2, trnSize, 4),
+                int a when a < 20 => (2, trnSize, 4, 98),
                 // --> we have not much data and default params wouldnt work. let adjust
-                int a when a < 32 => (6, trnSize, 10),
-                _ => (winSize, trnSize, serLen),
+                int a when a < 32 => (6, trnSize, 10, 98),
+                _ => (winSize, trnSize, serLen, 98),
             };
         }
     }

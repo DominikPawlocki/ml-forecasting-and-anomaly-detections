@@ -14,6 +14,8 @@ namespace ml_engine.Forecasting
                                                int winSize,
                                                int serLen,
                                                int trnSize,
+                                               bool isAdaptive,
+                                               int confidence,
                                                IEnumerable<DateData> driverData);
         MlSSAPrediction ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedModel,
                                        DateTime predictionsStartingDate,
@@ -43,6 +45,8 @@ namespace ml_engine.Forecasting
                                                int winSize,
                                                int serLen,
                                                int trnSize,
+                                               bool isAdaptive,
+                                               int confidence,
                                                IEnumerable<DateData> driverData)
 
         {
@@ -56,8 +60,8 @@ namespace ml_engine.Forecasting
                                             seriesLength: serLen, //-->
                                             trainSize: trnSize, //-->
                                             horizon: 1,
-                                            isAdaptive: true,
-                                            confidence: 98 / 1000);
+                                            isAdaptive: isAdaptive,
+                                            confidence: confidence / 100);
             return r;
         }
 
@@ -119,7 +123,6 @@ namespace ml_engine.Forecasting
                     .AppendCacheCheckpoint(MlContext)
                 .Append(estimator: forecastChain);
 
-            // Train.
             var trainedModel = estimatorChain.Fit(data);
 
             //var predictions = trainedModel.Transform(dataFor);
@@ -130,7 +133,7 @@ namespace ml_engine.Forecasting
             var result = new List<MlSSAPrediction>(driverData.Count());
             foreach (var dataPoint in driverData)
             {
-                result.Add(forecastEngine.Predict(dataPoint)); // ,0 -> this value is to be predicted for given date
+                result.Add(forecastEngine.Predict(dataPoint));
             }
 
             return (result, trainedModel); //in memory, be cautious when doing like with with bigger dataSets, rather use Save and Load methods via file or Stream

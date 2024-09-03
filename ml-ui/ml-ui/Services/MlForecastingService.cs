@@ -15,6 +15,8 @@ namespace ml_ui.Services
                                                                                                                                                           int winSize,
                                                                                                                                                           int serLen,
                                                                                                                                                           int trnSize,
+                                                                                                                                                          bool isAdaptive,
+                                                                                                                                                          int confidence,
                                                                                                                                                           IEnumerable<DateIntegerDataViewModel> dataSet);
         Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedSSAModel,
                                                                             DateTime pointsToBePredictedStartDate,
@@ -45,6 +47,8 @@ namespace ml_ui.Services
                      int winSize,
                      int serLen,
                      int trnSize,
+                     bool isAdaptive,
+                     int confidence,
                      IEnumerable<DateIntegerDataViewModel> dataSet)
         {
             var result = new List<DateIntegerForecasterDataViewModel>();
@@ -58,9 +62,12 @@ namespace ml_ui.Services
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet).ToList();
 
                 var (trainedModelDataOutput, trainedModel) = _forecaster.SSATrainModelAndReturnLearntOutput(detectionByColumnName,
-                                                                                            winSize,
-                                                                                            serLen,
-                                                                                            trnSize, dataSetForMl);
+                                                                                                            winSize,
+                                                                                                            serLen,
+                                                                                                            trnSize,
+                                                                                                            isAdaptive,
+                                                                                                            confidence,
+                                                                                                            dataSetForMl);
 
                 var resultsCasted = trainedModelDataOutput.ToArray();
                 //No automapper here 
