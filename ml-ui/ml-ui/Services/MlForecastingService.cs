@@ -4,23 +4,28 @@ using Microsoft.ML;
 using ml_data;
 using ml_engine.Forecasting;
 using ml_ui.ViewModels;
+using Microsoft.ML.Transforms.TimeSeries;
 
 namespace ml_ui.Services
 {
     public interface IMlForecastingService
     {
-        Task<IEnumerable<DateIntegerForecasterDataViewModel>> Forecast(string detectionByColumnName,
-                                                                       int howManyDataPointsToPredict,
-                                                                       int winSize,
-                                                                       int serLen,
-                                                                       int trnSize,
-                                                                       IEnumerable<DateIntegerDataViewModel> dataSet);
-        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)> TrainLinearRegression(string regressionLearnerName,
-                                                                                         string detectionByColumnName,
-                                                                                         IEnumerable<DateIntegerDataViewModel> dataSet);
-        Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForerecastByLinearRegression(TransformerChain<ITransformer> trainedRegressionModel,
+        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)> TrainSSA(string detectionByColumnName,
+                                                                                                                                                          int howManyDataPointsToPredict,
+                                                                                                                                                          int winSize,
+                                                                                                                                                          int serLen,
+                                                                                                                                                          int trnSize,
+                                                                                                                                                          IEnumerable<DateIntegerDataViewModel> dataSet);
+        Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedSSAModel,
                                                                                                         DateTime pointsToBePredictedStartDate,
                                                                                                         int howManyDataPointsToPredict);
+
+        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)> TrainLinearRegression(string regressionLearnerName,
+                                                                                                                                                          string detectionByColumnName,
+                                                                                                                                                          IEnumerable<DateIntegerDataViewModel> dataSet);
+        Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForerecastByLinearRegression(TransformerChain<ITransformer> trainedRegressionModel,
+                                                                                           DateTime pointsToBePredictedStartDate,
+                                                                                           int howManyDataPointsToPredict);
     }
 
     public class MlForecastingService : IMlForecastingService
@@ -34,33 +39,70 @@ namespace ml_ui.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<DateIntegerForecasterDataViewModel>> Forecast(string detectionByColumnName,
-                                                                                    int howManyDataPointsToPredict,
-                                                                                    int winSize,
-                                                                                    int serLen,
-                                                                                    int trnSize,
-                                                                                    IEnumerable<DateIntegerDataViewModel> dataSet)
+        public async Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)>
+            TrainSSA(string detectionByColumnName,
+                     int howManyDataPointsToPredict,
+                     int winSize,
+                     int serLen,
+                     int trnSize,
+                     IEnumerable<DateIntegerDataViewModel> dataSet)
         {
+
             if (dataSet == null || !dataSet.Any())
             {
-                return [];
+                return ([], null);
             }
             return await Task.Run(() =>
             {
-                var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
+                var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet).ToList();
                 if (dataSetForMl is null)
-                    return Enumerable.Empty<DateIntegerForecasterDataViewModel>();
-                var forecast = _forecaster.MlForecast(detectionByColumnName, howManyDataPointsToPredict, winSize, serLen, trnSize, dataSetForMl);
-                var result = new List<DateIntegerForecasterDataViewModel>(forecast.Predictions.Length);
-                for (var i = 0; i < forecast.Predictions.Count(); i++)
+                    return ([], null);
+
+                var (trainedModelDataOutput, trainedModel) = _forecaster.SSATrainModelAndReturnLearntOutput(detectionByColumnName,
+                                                                                            winSize,
+                                                                                            serLen,
+                                                                                            trnSize, dataSetForMl);
+
+                var resultsCasted = trainedModelDataOutput.ToList();
+                //No automapper here 
+                var result = new List<DateIntegerForecasterDataViewModel>();
+
+                //no automapper here - this model doesnt work like this. As we train model with making 1 prediction per dataPoint, there is one value in Vector preditions
+                for (var i = 0; i < dataSetForMl.Count; i++)
                 {
                     result.Add(new DateIntegerForecasterDataViewModel()
                     {
-                        Date = dataSetForMl.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * (i + 1)),
-                        Value = (int)forecast.Predictions[i],
+                        Date = dataSetForMl[i].Date,
+                        Value = (int)resultsCasted[i].Predictions[0],
                         IsForecasted = true,
-                        ConfidenceLowerBound = forecast.ConfidenceLowerBounds[i],
-                        ConfidenceUpperBound = forecast.ConfidenceUpperBounds[i],
+                        ConfidenceLowerBound = resultsCasted[i].ConfidenceLowerBounds[0],
+                        ConfidenceUpperBound = resultsCasted[i].ConfidenceUpperBounds[0],
+                    });
+                }
+                return (result, trainedModel);
+            });
+        }
+
+        public async Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedSSAModel,
+                                                                                                        DateTime pointsToBePredictedStartDate,
+                                                                                                        int howManyDataPointsToPredict)
+        {
+            return await Task.Run(() =>
+            {
+                if (howManyDataPointsToPredict == 0)
+                    return Enumerable.Empty<DateIntegerForecasterDataViewModel>();
+
+                var forecasted = _forecaster.ForecastBySSA(trainedSSAModel, pointsToBePredictedStartDate, howManyDataPointsToPredict);
+                var result = new List<DateIntegerForecasterDataViewModel>();
+                for (var i = 0; i < howManyDataPointsToPredict; i++)
+                {
+                    result.Add(new DateIntegerForecasterDataViewModel()
+                    {
+                        Date = pointsToBePredictedStartDate.AddDays(7 * i),
+                        Value = (int)forecasted.Predictions[i],
+                        IsForecasted = true,
+                        ConfidenceLowerBound = forecasted.ConfidenceLowerBounds[i],
+                        ConfidenceUpperBound = forecasted.ConfidenceUpperBounds[i],
                     });
                 }
                 return result;

@@ -3,17 +3,22 @@ using Microsoft.ML.Data;
 using Microsoft.ML.Trainers;
 using Microsoft.ML.Transforms.TimeSeries;
 using ml_data;
+using System.Data;
 
 namespace ml_engine.Forecasting
 {
     public interface IMlForecaster
     {
-        MlForecastResult MlForecast(string detectionByColumnName,
-                                    int howManyDataPointsToPredict,
-                                    int winSize,
-                                    int serLen,
-                                    int trnSize,
-                                    IEnumerable<DateData> driverData);
+        (IEnumerable<MlForecastResult> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
+            SSATrainModelAndReturnLearntOutput(string detectionByColumnName,
+                                               int winSize,
+                                               int serLen,
+                                               int trnSize,
+                                               IEnumerable<DateData> driverData);
+        MlForecastResult ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedModel,
+                                                    DateTime predictionsStartingDate,
+                                                    int howManyDataPointsToPredict,
+                                                    bool ignoreMissingColumns = true);
 
         IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
                                                                                      IEnumerable<DateData> dataPointsToBePredictedByModel,
@@ -33,31 +38,38 @@ namespace ml_engine.Forecasting
             MlContext = new MLContext(0);
         }
 
-        public MlForecastResult MlForecast(string detectionByColumnName,
-                                           int howManyDataPointsToPredict, int winSize, int serLen, int trnSize,
-                                           IEnumerable<DateData> driverData)
+        public (IEnumerable<MlForecastResult> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
+            SSATrainModelAndReturnLearntOutput(string detectionByColumnName,
+                                               int winSize,
+                                               int serLen,
+                                               int trnSize,
+                                               IEnumerable<DateData> driverData)
+
         {
             var orderedData = driverData.OrderBy(d => d.Date).ToList();
-            //cutTrailingZeroes();
-
             var dataView = MlContext.Data.LoadFromEnumerable(orderedData);
 
-            MlForecastResult DoPrediction()
-            {
-                var r = ForecastBySsa<DateData>(data: dataView,
-                                                                    detectionByColumnName: detectionByColumnName,
-                                                                    windowSize: winSize, //-->
-                                                                    seriesLength: serLen, //-->
-                                                                    trainSize: trnSize, //-->
-                                                                    horizon: howManyDataPointsToPredict,
-                                                                    isAdaptive: true,
-                                                                    confidence: 98 / 1000);
-                return r;
-            }
+            var r = TrainSSAModel<DateData>(data: dataView,
+                                            driverData: driverData,
+                                            detectionByColumnName: detectionByColumnName,
+                                            windowSize: winSize, //-->
+                                            seriesLength: serLen, //-->
+                                            trainSize: trnSize, //-->
+                                            horizon: 1,
+                                            isAdaptive: true,
+                                            confidence: 98 / 1000);
+            return r;
+        }
 
-            MlForecastResult resultData = DoPrediction();
+        public MlForecastResult ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedModel,
+                                                           DateTime predictionsStartingDate,
+                                                           int howManyDataPointsToPredict,
+                                                           bool ignoreMissingColumns = true)
+        {
+            // Create prediction engine related to the loaded trained model
+            var forecastEngine = trainedModel.CreateTimeSeriesEngine<DateData, MlForecastResult>(MlContext, ignoreMissingColumns);
 
-            return resultData;
+            return forecastEngine.Predict(howManyDataPointsToPredict);
         }
 
         public IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
@@ -69,7 +81,7 @@ namespace ml_engine.Forecasting
             var result = new List<MlLinearRegressionDateValuePredition>(dataPointsToBePredictedByModel.Count());
             foreach (var dataPoint in dataPointsToBePredictedByModel)
             {
-                var forecast = predEngine.Predict(dataPoint); // ,0 -> this value is to be predicted for given date
+                var forecast = predEngine.Predict(dataPoint);
                 result.Add(forecast);
             }
             return result;
@@ -88,14 +100,16 @@ namespace ml_engine.Forecasting
             return r;
         }
 
-        private MlForecastResult ForecastBySsa<T>(IDataView data,
-                                                  string detectionByColumnName,
-                                                  int windowSize,
-                                                  int seriesLength,
-                                                  int trainSize,
-                                                  int horizon,
-                                                  bool isAdaptive,
-                                                  float confidence) where T : class
+        private (IEnumerable<MlForecastResult> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
+            TrainSSAModel<T>(IDataView data,
+                             IEnumerable<T> driverData,
+                             string detectionByColumnName,
+                             int windowSize,
+                             int seriesLength,
+                             int trainSize,
+                             int horizon,
+                             bool isAdaptive,
+                             float confidence) where T : class
         {
             var forecastChain = GetForecastingSsaPipeline(detectionByColumnName + "Single", windowSize, seriesLength, trainSize, horizon, isAdaptive, confidence);
 
@@ -105,7 +119,21 @@ namespace ml_engine.Forecasting
                     .AppendCacheCheckpoint(MlContext)
                 .Append(estimator: forecastChain);
 
-            return PredictBySsa<T>(data, estimatorChain);
+            // Train.
+            var trainedModel = estimatorChain.Fit(data);
+
+            //var predictions = trainedModel.Transform(dataFor);
+            var ignoreMissingColumns = true;
+            var forecastEngine = trainedModel.CreateTimeSeriesEngine<T, MlForecastResult>(MlContext, ignoreMissingColumns);
+
+            //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
+            var result = new List<MlForecastResult>(driverData.Count());
+            foreach (var dataPoint in driverData)
+            {
+                result.Add(forecastEngine.Predict(dataPoint)); // ,0 -> this value is to be predicted for given date
+            }
+
+            return (result, trainedModel); //in memory, be cautious when doing like with with bigger dataSets, rather use Save and Load methods via file or Stream
         }
 
         private (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
@@ -183,7 +211,7 @@ namespace ml_engine.Forecasting
             var result = new List<MlLinearRegressionDateValuePredition>(driverData.Count());
             foreach (var dataPoint in driverData)
             {
-                var forecast = predEngine.Predict(dataPoint); // ,0 -> this value is to be predicted for given date
+                var forecast = predEngine.Predict(dataPoint);
                 result.Add(forecast);
             }
 
@@ -253,29 +281,6 @@ namespace ml_engine.Forecasting
                                                       l2Regularization,
                                                       maximumNumberOfIterations);
 
-        }
-
-        private MlForecastResult PredictBySsa<T>(IDataView dataFor,
-                                                EstimatorChain<SsaForecastingTransformer> forecastingModelChain,
-                                                bool ignoreMissingColumns = true) where T : class
-        {
-            // Train.
-            var transformer = forecastingModelChain.Fit(dataFor);
-
-            var predictions = transformer.Transform(dataFor);
-
-            var forecastEngine = transformer.CreateTimeSeriesEngine<T, MlForecastResult>(MlContext, ignoreMissingColumns);
-
-            //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
-            //var result = new List<MlLinearRegressionDateValuePredition>(driverData.Count());
-            //foreach (var dataPoint in driverData)
-            //{
-            //    var forecast = forecastEngine.Predict(dataPoint); // ,0 -> this value is to be predicted for given date
-            //    result.Add(forecast);
-            //}
-
-            var forecast = forecastEngine.Predict();
-            return forecast;
         }
 
         private (string name, IEstimator<ITransformer> value)[] FetchAllRegressionLearners(string labelColumnName, string featureColumnName)

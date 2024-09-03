@@ -1,5 +1,6 @@
 ﻿using Microsoft.ML.Data;
 using Microsoft.ML;
+using Microsoft.ML.Transforms.TimeSeries;
 
 namespace ml_ui.ViewModels
 {
@@ -8,6 +9,7 @@ namespace ml_ui.ViewModels
         public IEnumerable<DateIntegerForecasterDataViewModel>? DataPointsPredicted { get; set; } = [];
         public IEnumerable<DateIntegerForecasterDataViewModel>? RegressionTrainedModelDataOutput { get; set; } = [];
         public TransformerChain<ITransformer>? TrainedRegressionModel { get; set; }
+        public TransformerChain<SsaForecastingTransformer>? TrainedSSAModel { get; set; }
 
         public int SeriesLenght { get; set; }
 

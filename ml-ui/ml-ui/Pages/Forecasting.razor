@@ -127,7 +127,9 @@
                 <RadzenSlider Name="valueSlider" Min="1" Max="300" @bind-Value=@howManyFutureWeeksToPredictSSA Style="width: 200px;" />
                 <RadzenLabel Text="@howManyFutureWeeksToPredictSSA.ToString()" Component="valueSlider" />
 
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Predict)" Text="PREDICT !" />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainSSA)" Text="TRAINING !" />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDataBasedOnTrainedSSAModel)" Text="PREDICT !" />
+
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
@@ -191,7 +193,7 @@
                 <RadzenLabel Text="ShowTrainedModel" Component="dataLabels" />
 
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainLinearRegression)" Text="TRAINING !" />
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDatabasedOnTrainedRegressionModel)" Text="PREDICT !" />
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDataBasedOnTrainedRegressionModel)" Text="PREDICT !" />
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
@@ -232,12 +234,12 @@
         ViewModel.SetUpDefaults();
     }
 
-    private async Task Predict()
+    private async Task TrainSSA()
     {
-        ViewModel.ShowError = false;
+        ViewModel.SetUpDefaults();
         try
         {
-            ViewModel.DataPointsPredicted = await MlForecaster.Forecast(nameof(ml_data.DateData.Value), howManyFutureWeeksToPredictSSA, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
+            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedSSAModel) = await MlForecaster.TrainSSA(nameof(ml_data.DateData.Value), howManyFutureWeeksToPredictSSA, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
         }
         catch (Exception e)
         {
@@ -245,6 +247,22 @@
             ViewModel.ShowError = true;
         }
     }
+
+    private async Task ForecastDataBasedOnTrainedSSAModel()
+    {
+        ViewModel.ShowError = false;
+        try
+        {
+            ViewModel.DataPointsPredicted = await MlForecaster.ForecastBySSA(
+                ViewModel.TrainedSSAModel, ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredictSSA);
+        }
+        catch (Exception e)
+        {
+            ViewModel.ErrorOccuredText = e.Message + e.InnerException?.Message;
+            ViewModel.ShowError = true;
+        }
+    }
+    
 
     private async Task TrainLinearRegression()
     {
@@ -262,7 +280,7 @@
         }
     }
 
-    private async Task ForecastDatabasedOnTrainedRegressionModel()
+    private async Task ForecastDataBasedOnTrainedRegressionModel()
     {
         ViewModel.ShowError = false;
         try
