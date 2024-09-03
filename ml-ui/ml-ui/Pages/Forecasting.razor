@@ -124,8 +124,8 @@
                 </RadzenCard>
 
                 <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="1" Max="56" @bind-Value=@howManyFutureWeeksToPredict Style="width: 200px;" />
-                <RadzenLabel Text="@howManyFutureWeeksToPredict.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="1" Max="300" @bind-Value=@howManyFutureWeeksToPredictSSA Style="width: 200px;" />
+                <RadzenLabel Text="@howManyFutureWeeksToPredictSSA.ToString()" Component="valueSlider" />
 
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(Predict)" Text="PREDICT !" />
             </RadzenStack>
@@ -173,7 +173,7 @@
                                 <RadzenRadioButtonListItem Text="Ordinary Least Squares (OLS) linear regression" Value=@("OLS") TValue="string" />
                                 <RadzenRadioButtonListItem Text="Online Gradient Descent (OGD)" Value=@("ODG") TValue="string" />
                                 <RadzenRadioButtonListItem Text="Generalized Additive Models (GAM)" Value=@("GAM") TValue="string" />
-                                <RadzenRadioButtonListItem Text="Random forests" Value=@("RandomForests") TValue="string" />
+                                @* <RadzenRadioButtonListItem Text="Random forests" Value=@("RandomForests") TValue="string" /> *@
                             </Items>
                         </RadzenRadioButtonList>
                         <RadzenLabel Style="max-width: 350px" Text="There are parameters for every trainer. Please read Microsoft docs " />
@@ -200,6 +200,7 @@
 
 @code {
     private int howManyFutureWeeksToPredict = 2;
+    private int howManyFutureWeeksToPredictSSA = 2;
     private int preditionWeeksRelativeToDataSetEnd = 1;
 
     public ForecastingViewModel ViewModel = new ForecastingViewModel() { Data = new List<DateIntegerDataViewModel>(0) };
@@ -236,7 +237,7 @@
         ViewModel.ShowError = false;
         try
         {
-            ViewModel.DataPointsPredicted = await MlForecaster.Forecast(nameof(ml_data.DateData.Value), howManyFutureWeeksToPredict, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
+            ViewModel.DataPointsPredicted = await MlForecaster.Forecast(nameof(ml_data.DateData.Value), howManyFutureWeeksToPredictSSA, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
         }
         catch (Exception e)
         {

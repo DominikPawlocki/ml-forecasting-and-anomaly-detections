@@ -3,9 +3,6 @@ using Microsoft.ML.Data;
 using Microsoft.ML.Trainers;
 using Microsoft.ML.Transforms.TimeSeries;
 using ml_data;
-using System.Drawing;
-using System.Xml.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ml_engine.Forecasting
 {
@@ -26,13 +23,6 @@ namespace ml_engine.Forecasting
             TrainModelAndReturnLearntOutput(string regressionLearnerName, string detectionByColumnName, IEnumerable<DateData> allDataPointsUsedFortraining);
 
     }
-
-    //public class NewDateData(DateTime d, int v)
-    //{
-    //    public DateTime Date { get; } = d;
-    //    public int Value { get; } = v;
-    //    public float ValueSingle { get { return (float)v; } }
-    //}
 
     public class Forecaster : IMlForecaster
     {
@@ -88,7 +78,6 @@ namespace ml_engine.Forecasting
         public (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
             TrainModelAndReturnLearntOutput(string regressionLearnerName,
                                             string detectionByColumnName,
-                                            //IEnumerable<DateData> dataPointsToBePredictedByModel,
                                             IEnumerable<DateData> driverData)
         {
             var orderedData = driverData.OrderBy(d => d.Date).ToList();
@@ -184,8 +173,8 @@ namespace ml_engine.Forecasting
             // Train.
             var trainedModel = trainingPipeline.Fit(data);
 
-            var predictions = trainedModel.Transform(data);
-            //-------------- model evaluation -------------------
+            //var predictions = trainedModel.Transform(data);
+            //-------------- model evaluation - not used now, shows metrics and has a possibility to train model better-------------------
             //var metrics = MlContext.Regression.Evaluate(predictions, nameof(DateData.ValueForMl));
             //-------------------------------------------------
             //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
@@ -296,12 +285,13 @@ namespace ml_engine.Forecasting
             ("Poisson", MlContext.Regression.Trainers.LbfgsPoissonRegression( labelColumnName, featureColumnName)),
                 ("SDCA", MlContext.Regression.Trainers.Sdca( labelColumnName, featureColumnName)),
                 ("FastTreeTweedie", MlContext.Regression.Trainers.FastTreeTweedie(labelColumnName,featureColumnName)),
-                //Other possible learners that could be included
-                //...FastForestRegressor...
-                //...GeneralizedAdditiveModelRegressor...
-                //...OnlineGradientDescent... (Might need to normalize the features first)
+                ("GBM", MlContext.Regression.Trainers.LightGbm(labelColumnName,featureColumnName)),
+                ("OLS", MlContext.Regression.Trainers.Ols(labelColumnName,featureColumnName)),
+                ("ODG", MlContext.Regression.Trainers.OnlineGradientDescent(labelColumnName,featureColumnName)),
+                ("GAM", MlContext.Regression.Trainers.Gam(labelColumnName,featureColumnName)),
+                //("RandomForests", MlContext.Regression.Trainers.fore(labelColumnName,featureColumnName)),
+                
             ];
-
         }
     }
 }
