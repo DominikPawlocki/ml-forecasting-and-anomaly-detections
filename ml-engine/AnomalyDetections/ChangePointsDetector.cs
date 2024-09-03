@@ -1,11 +1,6 @@
 ﻿using Microsoft.ML;
 using Microsoft.ML.Data;
 using Microsoft.ML.Transforms.TimeSeries;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ml_engine.AnomalyDetections
 {
@@ -26,15 +21,15 @@ namespace ml_engine.AnomalyDetections
     public class ChangePointsDetector : BaseForAllDetectors, IChangePointsDetector
     {
         public IEnumerable<SpikesDetectedVector> GetChangePoints<T>(IDataView data,
-                                           DetectionMethod numericMethod,
-                                           string inputColumnName,
-                                           int confidence,
-                                           int changeHistoryLength,
-                                           int trainingWindowSize = 100,
-                                           int seasonalityWindowSize = 10,
-                                           ErrorFunction errorFunc = ErrorFunction.SignedDifference,
-                                           MartingaleType martingale = MartingaleType.Power,
-                                           double eps = 0.1) where T : class, new()
+                                                                    DetectionMethod numericMethod,
+                                                                    string inputColumnName,
+                                                                    int confidence,
+                                                                    int changeHistoryLength,
+                                                                    int trainingWindowSize = 100,
+                                                                    int seasonalityWindowSize = 10,
+                                                                    ErrorFunction errorFunc = ErrorFunction.SignedDifference,
+                                                                    MartingaleType martingale = MartingaleType.Power,
+                                                                    double eps = 0.1) where T : class, new()
         {
             var transformedModel = GetChangePointTransformedModel<T>(data,
                                                                      numericMethod,
@@ -52,15 +47,15 @@ namespace ml_engine.AnomalyDetections
         }
 
         private IDataView GetChangePointTransformedModel<T>(IDataView data,
-                                                           DetectionMethod numericMethod,
-                                                           string inputColumnName,
-                                                           int confidence,
-                                                           int changeHistoryLength,
-                                                           int trainingWindowSize = 100,
-                                                           int seasonalityWindowSize = 10,
-                                                           ErrorFunction errorFunc = ErrorFunction.SignedDifference,
-                                                           MartingaleType martingale = MartingaleType.Power,
-                                                           double eps = 0.1)
+                                                            DetectionMethod numericMethod,
+                                                            string inputColumnName,
+                                                            int confidence,
+                                                            int changeHistoryLength,
+                                                            int trainingWindowSize = 100,
+                                                            int seasonalityWindowSize = 10,
+                                                            ErrorFunction errorFunc = ErrorFunction.SignedDifference,
+                                                            MartingaleType martingale = MartingaleType.Power,
+                                                            double eps = 0.1)
            where T : class, new()
         {
             Console.WriteLine($"===============Detect changePoint with pattern {numericMethod} ===============");

@@ -10,17 +10,17 @@ namespace ml_ui.Services
 {
     public interface IMlForecastingService
     {
-        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)> TrainSSA(string detectionByColumnName,
+        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer>? trainedModel)> TrainSSA(string detectionByColumnName,
                                                                                                                                                           int howManyDataPointsToPredict,
                                                                                                                                                           int winSize,
                                                                                                                                                           int serLen,
                                                                                                                                                           int trnSize,
                                                                                                                                                           IEnumerable<DateIntegerDataViewModel> dataSet);
         Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedSSAModel,
-                                                                                                        DateTime pointsToBePredictedStartDate,
-                                                                                                        int howManyDataPointsToPredict);
+                                                                            DateTime pointsToBePredictedStartDate,
+                                                                            int howManyDataPointsToPredict);
 
-        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)> TrainLinearRegression(string regressionLearnerName,
+        Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer>? trainedModel)> TrainLinearRegression(string regressionLearnerName,
                                                                                                                                                           string detectionByColumnName,
                                                                                                                                                           IEnumerable<DateIntegerDataViewModel> dataSet);
         Task<IEnumerable<DateIntegerForecasterDataViewModel>> ForerecastByLinearRegression(TransformerChain<ITransformer> trainedRegressionModel,
@@ -39,7 +39,7 @@ namespace ml_ui.Services
             _mapper = mapper;
         }
 
-        public async Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)>
+        public async Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer>? trainedModel)>
             TrainSSA(string detectionByColumnName,
                      int howManyDataPointsToPredict,
                      int winSize,
@@ -47,25 +47,23 @@ namespace ml_ui.Services
                      int trnSize,
                      IEnumerable<DateIntegerDataViewModel> dataSet)
         {
+            var result = new List<DateIntegerForecasterDataViewModel>();
 
             if (dataSet == null || !dataSet.Any())
             {
-                return ([], null);
+                return (result, null);
             }
             return await Task.Run(() =>
             {
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet).ToList();
-                if (dataSetForMl is null)
-                    return ([], null);
 
                 var (trainedModelDataOutput, trainedModel) = _forecaster.SSATrainModelAndReturnLearntOutput(detectionByColumnName,
                                                                                             winSize,
                                                                                             serLen,
                                                                                             trnSize, dataSetForMl);
 
-                var resultsCasted = trainedModelDataOutput.ToList();
+                var resultsCasted = trainedModelDataOutput.ToArray();
                 //No automapper here 
-                var result = new List<DateIntegerForecasterDataViewModel>();
 
                 //no automapper here - this model doesnt work like this. As we train model with making 1 prediction per dataPoint, there is one value in Vector preditions
                 for (var i = 0; i < dataSetForMl.Count; i++)
@@ -132,7 +130,7 @@ namespace ml_ui.Services
             });
         }
 
-        public async Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)>
+        public async Task<(IEnumerable<DateIntegerForecasterDataViewModel> trainedModelDataOutput, TransformerChain<ITransformer>? trainedModel)>
             TrainLinearRegression(
                 string regressionLearnerName,
                 string detectionByColumnName,
@@ -146,8 +144,6 @@ namespace ml_ui.Services
             return await Task.Run(() =>
             {
                 var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet);
-                if (dataSetForMl is null)
-                    return ([], null);
 
                 var modelOutput = _forecaster.TrainModelAndReturnLearntOutput(regressionLearnerName, detectionByColumnName, dataSetForMl);
                 var result = _mapper.Map<IEnumerable<DateIntegerForecasterDataViewModel>>(modelOutput.trainedModelDataOutput);

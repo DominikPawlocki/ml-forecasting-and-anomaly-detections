@@ -2,9 +2,9 @@
 
 namespace ml_engine.Forecasting
 {
-    public class MlForecastResult
+    public class MlSSAPrediction
     {
-        public MlForecastResult()
+        public MlSSAPrediction()
         {
             Predictions = [];
             ConfidenceLowerBounds = [];
@@ -19,7 +19,7 @@ namespace ml_engine.Forecasting
         public float[] ConfidenceUpperBounds { get; set; }
     }
 
-    public class MlLinearRegressionDateValuePredition
+    public class MlLinearRegressionDateValuePrediction
     {
         public DateTime Date;
         public float DateEncoded;

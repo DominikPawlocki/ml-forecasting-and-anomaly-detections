@@ -9,22 +9,22 @@ namespace ml_engine.Forecasting
 {
     public interface IMlForecaster
     {
-        (IEnumerable<MlForecastResult> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
+        (IEnumerable<MlSSAPrediction> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
             SSATrainModelAndReturnLearntOutput(string detectionByColumnName,
                                                int winSize,
                                                int serLen,
                                                int trnSize,
                                                IEnumerable<DateData> driverData);
-        MlForecastResult ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedModel,
-                                                    DateTime predictionsStartingDate,
-                                                    int howManyDataPointsToPredict,
-                                                    bool ignoreMissingColumns = true);
+        MlSSAPrediction ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedModel,
+                                       DateTime predictionsStartingDate,
+                                       int howManyDataPointsToPredict,
+                                       bool ignoreMissingColumns = true);
 
-        IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
+        IEnumerable<MlLinearRegressionDateValuePrediction> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
                                                                                      IEnumerable<DateData> dataPointsToBePredictedByModel,
                                                                                      bool ignoreMissingColumns = true);
 
-        (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
+        (IEnumerable<MlLinearRegressionDateValuePrediction> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
             TrainModelAndReturnLearntOutput(string regressionLearnerName, string detectionByColumnName, IEnumerable<DateData> allDataPointsUsedFortraining);
 
     }
@@ -38,7 +38,7 @@ namespace ml_engine.Forecasting
             MlContext = new MLContext(0);
         }
 
-        public (IEnumerable<MlForecastResult> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
+        public (IEnumerable<MlSSAPrediction> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
             SSATrainModelAndReturnLearntOutput(string detectionByColumnName,
                                                int winSize,
                                                int serLen,
@@ -61,24 +61,24 @@ namespace ml_engine.Forecasting
             return r;
         }
 
-        public MlForecastResult ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedModel,
-                                                           DateTime predictionsStartingDate,
-                                                           int howManyDataPointsToPredict,
-                                                           bool ignoreMissingColumns = true)
+        public MlSSAPrediction ForecastBySSA(TransformerChain<SsaForecastingTransformer> trainedModel,
+                                              DateTime predictionsStartingDate,
+                                              int howManyDataPointsToPredict,
+                                              bool ignoreMissingColumns = true)
         {
             // Create prediction engine related to the loaded trained model
-            var forecastEngine = trainedModel.CreateTimeSeriesEngine<DateData, MlForecastResult>(MlContext, ignoreMissingColumns);
+            var forecastEngine = trainedModel.CreateTimeSeriesEngine<DateData, MlSSAPrediction>(MlContext, ignoreMissingColumns);
 
             return forecastEngine.Predict(howManyDataPointsToPredict);
         }
 
-        public IEnumerable<MlLinearRegressionDateValuePredition> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
+        public IEnumerable<MlLinearRegressionDateValuePrediction> ForecastByLinearRegression(TransformerChain<ITransformer> trainedModel,
                                                                                             IEnumerable<DateData> dataPointsToBePredictedByModel,
                                                                                             bool ignoreMissingColumns = true)
         {
             // Create prediction engine related to the loaded trained model
-            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePredition>(trainedModel);
-            var result = new List<MlLinearRegressionDateValuePredition>(dataPointsToBePredictedByModel.Count());
+            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePrediction>(trainedModel);
+            var result = new List<MlLinearRegressionDateValuePrediction>(dataPointsToBePredictedByModel.Count());
             foreach (var dataPoint in dataPointsToBePredictedByModel)
             {
                 var forecast = predEngine.Predict(dataPoint);
@@ -87,7 +87,7 @@ namespace ml_engine.Forecasting
             return result;
         }
 
-        public (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
+        public (IEnumerable<MlLinearRegressionDateValuePrediction> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
             TrainModelAndReturnLearntOutput(string regressionLearnerName,
                                             string detectionByColumnName,
                                             IEnumerable<DateData> driverData)
@@ -100,7 +100,7 @@ namespace ml_engine.Forecasting
             return r;
         }
 
-        private (IEnumerable<MlForecastResult> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
+        private (IEnumerable<MlSSAPrediction> trainedModelDataOutput, TransformerChain<SsaForecastingTransformer> trainedModel)
             TrainSSAModel<T>(IDataView data,
                              IEnumerable<T> driverData,
                              string detectionByColumnName,
@@ -124,10 +124,10 @@ namespace ml_engine.Forecasting
 
             //var predictions = trainedModel.Transform(dataFor);
             var ignoreMissingColumns = true;
-            var forecastEngine = trainedModel.CreateTimeSeriesEngine<T, MlForecastResult>(MlContext, ignoreMissingColumns);
+            var forecastEngine = trainedModel.CreateTimeSeriesEngine<T, MlSSAPrediction>(MlContext, ignoreMissingColumns);
 
             //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
-            var result = new List<MlForecastResult>(driverData.Count());
+            var result = new List<MlSSAPrediction>(driverData.Count());
             foreach (var dataPoint in driverData)
             {
                 result.Add(forecastEngine.Predict(dataPoint)); // ,0 -> this value is to be predicted for given date
@@ -136,7 +136,7 @@ namespace ml_engine.Forecasting
             return (result, trainedModel); //in memory, be cautious when doing like with with bigger dataSets, rather use Save and Load methods via file or Stream
         }
 
-        private (IEnumerable<MlLinearRegressionDateValuePredition> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
+        private (IEnumerable<MlLinearRegressionDateValuePrediction> trainedModelDataOutput, TransformerChain<ITransformer> trainedModel)
             ForecastByRegression(string regressionLearnerName, IDataView data, string detectionByColumnName, IEnumerable<DateData> driverData)
         {
             // STEP 2: Common data process configuration with pipeline data transformations
@@ -184,7 +184,7 @@ namespace ml_engine.Forecasting
 
             var dataProcessPipeline = MlContext.Transforms.Conversion
                 .ConvertType(new[] { new InputOutputColumnPair(detectionByColumnName + "Single", detectionByColumnName) }, DataKind.Single)
-                .Append(MlContext.Transforms.Concatenate("Features", nameof(DateData.A))) //needs vector of Single
+                .Append(MlContext.Transforms.Concatenate("Features", nameof(DateData.DateProjectedToNumberForMl))) //needs vector of Single
                 .AppendCacheCheckpoint(MlContext);
 
             //------ was good for SDCA --------------
@@ -206,9 +206,9 @@ namespace ml_engine.Forecasting
             //var metrics = MlContext.Regression.Evaluate(predictions, nameof(DateData.ValueForMl));
             //-------------------------------------------------
             //------------ just output all predictions 'learnt' - to see what model output gives with comparison to original data
-            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePredition>(trainedModel);
+            var predEngine = MlContext.Model.CreatePredictionEngine<DateData, MlLinearRegressionDateValuePrediction>(trainedModel);
 
-            var result = new List<MlLinearRegressionDateValuePredition>(driverData.Count());
+            var result = new List<MlLinearRegressionDateValuePrediction>(driverData.Count());
             foreach (var dataPoint in driverData)
             {
                 var forecast = predEngine.Predict(dataPoint);
@@ -219,17 +219,17 @@ namespace ml_engine.Forecasting
         }
 
         private SsaForecastingEstimator GetForecastingSsaPipeline(string detectionByColumnName,
-                                                                    int windowSize,
-                                                                    int seriesLength,
-                                                                    int trainSize,
-                                                                    int horizon,
-                                                                    bool isAdaptive,
-                                                                    float confidence)
+                                                                  int windowSize,
+                                                                  int seriesLength,
+                                                                  int trainSize,
+                                                                  int horizon,
+                                                                  bool isAdaptive,
+                                                                  float confidence)
         {
             // Instantiate the forecasting model. After https://github.com/dotnet/machinelearning-samples/blob/main/samples/csharp/end-to-end-apps/Forecasting-Sales/README.md
             return MlContext.Forecasting.ForecastBySsa(
                                                        //This is the name of the column that will be used to store predictions. The column must be a vector of type Single.
-                                                       outputColumnName: nameof(MlForecastResult.Predictions).ToString(),
+                                                       outputColumnName: nameof(MlSSAPrediction.Predictions).ToString(),
                                                        inputColumnName: detectionByColumnName,
                                                        //--> the window for analyzis - eg 7 means a week window.
                                                        //This is the most important parameter that you can use to tune the accuracy of the model for your scenario.
@@ -258,9 +258,9 @@ namespace ml_engine.Forecasting
                                                        shouldMaintainInfo: false,
                                                        maxGrowth: null,
                                                        //This is the name of the column that will be used to store the lower confidence interval bound for each forecasted value. The ProductUnitTimeSeriesPrediction class also contains this output column.
-                                                       confidenceLowerBoundColumn: nameof(MlForecastResult.ConfidenceLowerBounds).ToString(),
+                                                       confidenceLowerBoundColumn: nameof(MlSSAPrediction.ConfidenceLowerBounds).ToString(),
                                                        //This is the name of the column that will be used to store the upper confidence interval bound for each forecasted value. The ProductUnitTimeSeriesPrediction class also contains this output column.
-                                                       confidenceUpperBoundColumn: nameof(MlForecastResult.ConfidenceUpperBounds).ToString(),
+                                                       confidenceUpperBoundColumn: nameof(MlSSAPrediction.ConfidenceUpperBounds).ToString(),
                                                        //This parameter indicates the likelihood the real observed value will fall within the specified interval bounds. Typically, .95 is an acceptable starting point - this value should be between [0, 1). Usually, the higher the confidence level, the wider the range that the interval bounds will be. And conversely, the lower the confidence level, the narrower the interval bounds.
                                                        confidenceLevel: confidence,
                                                        variableHorizon: false);
@@ -295,7 +295,6 @@ namespace ml_engine.Forecasting
                 ("ODG", MlContext.Regression.Trainers.OnlineGradientDescent(labelColumnName,featureColumnName)),
                 ("GAM", MlContext.Regression.Trainers.Gam(labelColumnName,featureColumnName)),
                 //("RandomForests", MlContext.Regression.Trainers.fore(labelColumnName,featureColumnName)),
-                
             ];
         }
     }

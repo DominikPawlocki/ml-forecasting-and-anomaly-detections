@@ -14,7 +14,7 @@ namespace ml_ui.AutoMapper
             {
                 return new DateData(src.Date, src.Value);
             });
-            CreateMap<MlLinearRegressionDateValuePredition, DateIntegerForecasterDataViewModel>();
+            CreateMap<MlLinearRegressionDateValuePrediction, DateIntegerForecasterDataViewModel>();
         }
     }
 }

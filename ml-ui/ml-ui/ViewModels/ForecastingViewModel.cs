@@ -20,6 +20,10 @@ namespace ml_ui.ViewModels
 
         public string RegressionLearner { get; set; } = "SDCA";
 
+        public int HowManyFutureWeeksToPredict { get; set; } = 2;
+        public int HowManyFutureWeeksToPredictSSA { get; set; } = 2;
+        public int PreditionWeeksRelativeToDataSetEnd { get; set; } = 1;
+
         private void ClearModel()
         {
             DataPointsPredicted = [];

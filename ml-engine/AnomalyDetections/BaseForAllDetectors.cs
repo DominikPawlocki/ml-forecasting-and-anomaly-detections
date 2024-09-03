@@ -21,7 +21,7 @@ namespace ml_engine.AnomalyDetections
         protected IDataView TransformModel<T>(IDataView untrainedModel, EstimatorChain<ITransformer> estimatorChain) where T : class
         {
             // STEP 2:The Transformed Model.
-            // In IID Spike detection, we don't need to do training, we just need to do transformation. 
+            // For these detections, don't need to do training, we just need to do transformation. 
             // As you are not training the model, there is no need to load IDataView with real data, you just need schema of data.
             // So create empty data view and pass to Fit() method. 
             ITransformer tansformedModel = estimatorChain.Fit(CreateEmptyDataView<T>());

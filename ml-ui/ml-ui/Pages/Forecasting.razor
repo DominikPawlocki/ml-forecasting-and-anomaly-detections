@@ -124,8 +124,8 @@
                 </RadzenCard>
 
                 <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="1" Max="300" @bind-Value=@howManyFutureWeeksToPredictSSA Style="width: 200px;" />
-                <RadzenLabel Text="@howManyFutureWeeksToPredictSSA.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="1" Max="300" @bind-Value=@ViewModel.HowManyFutureWeeksToPredictSSA Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.HowManyFutureWeeksToPredictSSA.ToString()" Component="valueSlider" />
 
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(TrainSSA)" Text="TRAINING !" />
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(ForecastDataBasedOnTrainedSSAModel)" Text="PREDICT !" />
@@ -182,12 +182,12 @@
                     </RadzenStack>
                 </RadzenCard>
                 <RadzenLabel Text="DatesOfPrediction" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="-200" Max="200" @bind-Value=@preditionWeeksRelativeToDataSetEnd Style="width: 200px;" />
-                <RadzenLabel Text="@preditionWeeksRelativeToDataSetEnd.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="-200" Max="200" @bind-Value=@ViewModel.PreditionWeeksRelativeToDataSetEnd Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.PreditionWeeksRelativeToDataSetEnd.ToString()" Component="valueSlider" />
 
                 <RadzenLabel Text="NrOfWeeksToPredict" Component="valueSlider" />
-                <RadzenSlider Name="valueSlider" Min="1" Max="56" @bind-Value=@howManyFutureWeeksToPredict Style="width: 200px;" />
-                <RadzenLabel Text="@howManyFutureWeeksToPredict.ToString()" Component="valueSlider" />
+                <RadzenSlider Name="valueSlider" Min="1" Max="56" @bind-Value=@ViewModel.HowManyFutureWeeksToPredict Style="width: 200px;" />
+                <RadzenLabel Text="@ViewModel.HowManyFutureWeeksToPredict.ToString()" Component="valueSlider" />
 
                 <RadzenCheckBox @bind-Value="@ViewModel.ShowTrainedModel" Name="dataLabels"></RadzenCheckBox>
                 <RadzenLabel Text="ShowTrainedModel" Component="dataLabels" />
@@ -201,10 +201,6 @@
 </RadzenStack>
 
 @code {
-    private int howManyFutureWeeksToPredict = 2;
-    private int howManyFutureWeeksToPredictSSA = 2;
-    private int preditionWeeksRelativeToDataSetEnd = 1;
-
     public ForecastingViewModel ViewModel = new ForecastingViewModel() { Data = new List<DateIntegerDataViewModel>(0) };
 
     protected override async Task OnInitializedAsync()
@@ -239,7 +235,7 @@
         ViewModel.SetUpDefaults();
         try
         {
-            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedSSAModel) = await MlForecaster.TrainSSA(nameof(ml_data.DateData.Value), howManyFutureWeeksToPredictSSA, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
+            (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedSSAModel) = await MlForecaster.TrainSSA(nameof(ml_data.DateData.Value), ViewModel.HowManyFutureWeeksToPredictSSA, ViewModel.WindowSize, ViewModel.SeriesLenght, ViewModel.TrainSize, ViewModel.Data);
         }
         catch (Exception e)
         {
@@ -253,8 +249,9 @@
         ViewModel.ShowError = false;
         try
         {
-            ViewModel.DataPointsPredicted = await MlForecaster.ForecastBySSA(
-                ViewModel.TrainedSSAModel, ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredictSSA);
+            if (ViewModel.TrainedSSAModel is not null && ViewModel.Data is not null && ViewModel.Data.Any())
+                ViewModel.DataPointsPredicted = await MlForecaster.ForecastBySSA(
+                    ViewModel.TrainedSSAModel, ViewModel.Data.OrderBy(d => d.Date).Last().Date.AddDays(7 * ViewModel.PreditionWeeksRelativeToDataSetEnd), ViewModel.HowManyFutureWeeksToPredictSSA);
         }
         catch (Exception e)
         {
@@ -262,15 +259,12 @@
             ViewModel.ShowError = true;
         }
     }
-    
 
     private async Task TrainLinearRegression()
     {
         ViewModel.SetUpDefaults();
         try
         {
-            // ViewModel.DataPointsPredicted = await MlForecaster.TrainLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.ValueForMl),
-            // ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredict, ViewModel.Data);
             (ViewModel.RegressionTrainedModelDataOutput, ViewModel.TrainedRegressionModel) = await MlForecaster.TrainLinearRegression(ViewModel.RegressionLearner, nameof(ml_data.DateData.Value), ViewModel.Data);
         }
         catch (Exception e)
@@ -285,8 +279,9 @@
         ViewModel.ShowError = false;
         try
         {
-            ViewModel.DataPointsPredicted = await MlForecaster.ForerecastByLinearRegression(
-                ViewModel.TrainedRegressionModel, ViewModel.Data.OrderBy(d => d.Date).LastOrDefault().Date.AddDays(7 * preditionWeeksRelativeToDataSetEnd), howManyFutureWeeksToPredict);
+            if (ViewModel.TrainedRegressionModel is not null && ViewModel.Data is not null && ViewModel.Data.Any())
+                ViewModel.DataPointsPredicted = await MlForecaster.ForerecastByLinearRegression(
+                    ViewModel.TrainedRegressionModel, ViewModel.Data.OrderBy(d => d.Date).Last().Date.AddDays(7 * ViewModel.PreditionWeeksRelativeToDataSetEnd), ViewModel.HowManyFutureWeeksToPredict);
         }
         catch (Exception e)
         {
@@ -294,5 +289,4 @@
             ViewModel.ShowError = true;
         }
     }
-
 }
