@@ -8,11 +8,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ml-data", "..\ml-data\ml-da
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ml-engine", "..\ml-engine\ml-engine.csproj", "{11F13412-B10A-4416-8173-0EC0F7DB645D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7249B87C-94E4-436C-BA5E-0CF96325F595}"
-	ProjectSection(SolutionItems) = preProject
-		README.md = README.md
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
