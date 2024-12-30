@@ -7,7 +7,6 @@
 @inject WebSocketDataConnector DataProvider
 @inject IMlDataAnomaliesDetectingService MlSpikesAnomaliesChangePointsDetector
 
-
 <PageTitle>Index</PageTitle>
 
 <RadzenStack class="rz-p-0 rz-p-md-6 rz-p-lg-12">
@@ -42,7 +41,6 @@
             <RadzenSlider Name="valueSlider" Min="-10000000" Max="0" @bind-Value=@ViewModel.RandomLowerBound Style="width: 200px;" />
             <RadzenLabel Text="@ViewModel.RandomLowerBound.ToString()" Component="valueSlider" />
 
-
             <RadzenLabel Text="Nr of discrepancies" Component="valueSlider" />
             <RadzenSlider Name="valueSlider" Min="0" Max="30" @bind-Value=@ViewModel.RandomDiscrepanciesAmount Style="width: 200px;" />
             <RadzenLabel Text="@ViewModel.RandomDiscrepanciesAmount.ToString()" Component="valueSlider" />
@@ -76,7 +74,7 @@
     </RadzenStack>
 
     <RadzenChart>
-        <RadzenChartTooltipOptions Shared="false" />
+        <RadzenChartTooltipOptions Shared="true" Visible="true" />
         <RadzenLineSeries Smooth="true" Data="@ViewModel.Data" CategoryProperty="Date" Title="Dataset" ValueProperty="Value">
             <RadzenMarkers Visible="true" MarkerType="MarkerType.Circle" />
             <RadzenSeriesDataLabels Visible="@ViewModel.ShowDataLabels" />
@@ -96,6 +94,10 @@
                 <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Triangle" />
                 <RadzenSeriesDataLabels Visible="true" />
             </ChildContent>
+        </RadzenLineSeries>
+        <RadzenLineSeries Data="@ViewModel.ChangePointsDetected" CategoryProperty="Date" Title="Changepoints" ValueProperty="Value" LineType="LineType.Dotted" Interpolation="Interpolation.Step">
+            <RadzenMarkers Visible="true" Size="12" MarkerType="MarkerType.Diamond" />
+            <RadzenSeriesDataLabels Visible="true" />
         </RadzenLineSeries>
         <RadzenCategoryAxis Padding="20" />
         <RadzenValueAxis>
@@ -208,7 +210,7 @@
                         </RadzenRadioButtonList>
 
                         <RadzenLabel Text="Confidence" Component="valueSlider" />
-                        <RadzenSlider Name="valueSlider" Min="2" Max="@(ViewModel.Data.Count()/2 -1)" @bind-Value="@ViewModel.ChangePoints_Confidence" />
+                        <RadzenSlider Name="valueSlider" Min="1" Max="100" @bind-Value="@ViewModel.ChangePoints_Confidence" />
                         <RadzenLabel Text="@ViewModel.ChangePoints_Confidence.ToString()" Component="valueSlider" />
 
                         <RadzenLabel Text="Change History Length" Component="valueSlider" />
@@ -223,7 +225,7 @@
                         <RadzenSlider Name="valueSlider" Min="5" Max="@ViewModel.Data.Count()" @bind-Value="@ViewModel.ChangePoints_SeasonalityWindowSize" />
                         <RadzenLabel Text="@ViewModel.ChangePoints_SeasonalityWindowSize.ToString()" Component="valueSlider" />
                     </RadzenStack>
-                    <RadzenLabel Text="There are more parameters like: 'isAdaptive', 'shouldStabilize' etc... Please read Microsoft docs " />
+                    <RadzenLabel Text="There are more parameters like: 'errorFunction', 'martingale' etc... Please read Microsoft docs " />
                 </RadzenCard>
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="refresh" Size="ButtonSize.Medium" Click="@(DetectChangePoints)" Text="Detect !" />
             </RadzenStack>
@@ -267,6 +269,7 @@
         ViewModel.ShowError = false;
         ViewModel.ClearModelSpikes();
         ViewModel.ClearModelAnomalies();
+        ViewModel.ClearModelChangePoints();
         try
         {
             ViewModel.SpikesDetected = await MlSpikesAnomaliesChangePointsDetector.DetectSpikes(ViewModel.Spikes_NumericMethod,
@@ -287,6 +290,9 @@
     private async Task DetectAnomalies()
     {
         ViewModel.ShowError = false;
+        ViewModel.ClearModelSpikes();
+        ViewModel.ClearModelAnomalies();
+        ViewModel.ClearModelChangePoints();
         try
         {
             ViewModel.AnomaliesDetected = await MlSpikesAnomaliesChangePointsDetector.DetectAnomalies(ViewModel.Anomalies_Threshold, ViewModel.Anomalies_BatchSize,
@@ -303,6 +309,24 @@
 
     private async Task DetectChangePoints()
     {
-        // ViewModel.DataPointsDetectedAsAnomalies = await MlSpikesAnomaliesChangePointsDetector.DetectSpikes(howManyFutureWeeksToPredict, ViewModel.Data);
+        ViewModel.ShowError = false;
+        ViewModel.ClearModelSpikes();
+        ViewModel.ClearModelAnomalies();
+        ViewModel.ClearModelChangePoints();
+        try
+        {
+            ViewModel.ChangePointsDetected = await MlSpikesAnomaliesChangePointsDetector.DetectChangePoints(nameof(ml_data.DateData.Value),
+                                                                                        ViewModel.Data,
+                                                                       ViewModel.ChangePoints_NumericMethod,
+                                                                       ViewModel.ChangePoints_Confidence,
+                                                                       ViewModel.ChangePoints_ChangeHistoryLength,
+                                                                       ViewModel.ChangePoints_TrainingWindowSize,
+                                                                       ViewModel.ChangePoints_SeasonalityWindowSize);
+        }
+        catch (Exception e)
+        {
+            ViewModel.ErrorOccuredText = e.Message + e.InnerException?.Message;
+            ViewModel.ShowError = true;
+        }
     }
 }

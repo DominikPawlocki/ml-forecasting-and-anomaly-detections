@@ -26,20 +26,34 @@ namespace ml_ui.Services
                                                                                 IEnumerable<DateIntegerDataViewModel> dataSet,
                                                                                 string detectionByColumnName,
                                                                                 bool detectedAlertsOnly = true);
+        public Task<IEnumerable<ChangePointDetectionDataViewModel>> DetectChangePoints(string detectionByColumnName,
+                                                                                       IEnumerable<DateIntegerDataViewModel> dataSet,
+                                                                                       DetectionMethod detectMode,
+                                                                                       int confidence,
+                                                                                       int changeHistoryLength,
+                                                                                       int trainingWindowSize,
+                                                                                       int seasonalityWindowSize,
+                                                                                       ErrorFunction errorFunc = ErrorFunction.SignedDifference,
+                                                                                       MartingaleType martingale = MartingaleType.Power,
+                                                                                       double eps = 0.1,
+                                                                                       bool detectedAlertsOnly = true);
     }
 
     public class MlDataAnomaliesDetectingService : IMlDataAnomaliesDetectingService
     {
         private readonly ISpikesDetector _spikesDetector;
         private readonly IAnomalyDetector _anomalyDetector;
+        private readonly IChangePointsDetector _changePointsDetector;
         private readonly IMapper _mapper;
 
         public MlDataAnomaliesDetectingService(ISpikesDetector spikesDetector,
                                                IAnomalyDetector anomalyDetector,
+                                               IChangePointsDetector changePointsDetector,
                                                IMapper mapper)
         {
             _spikesDetector = spikesDetector;
             _anomalyDetector = anomalyDetector;
+            _changePointsDetector = changePointsDetector;
             _mapper = mapper;
         }
 
@@ -163,16 +177,73 @@ namespace ml_ui.Services
             });
         }
 
+
+        public async Task<IEnumerable<ChangePointDetectionDataViewModel>> DetectChangePoints(string detectionByColumnName,
+                                                                                             IEnumerable<DateIntegerDataViewModel> dataSet,
+                                                                                             DetectionMethod detectMode,
+                                                                                             int confidence,
+                                                                                             int changeHistoryLength,
+                                                                                             int trainingWindowSize,
+                                                                                             int seasonalityWindowSize,
+                                                                                             ErrorFunction errorFunc = ErrorFunction.SignedDifference,
+                                                                                             MartingaleType martingale = MartingaleType.Power,
+                                                                                             double eps = 0.1,
+                                                                                             bool detectedAlertsOnly = true)
+        {
+            return await Task.Run(() =>
+            {
+                var dataSetForMl = _mapper.Map<IEnumerable<DateData>>(dataSet.OrderBy(d => d.Date)).ToList();
+                SpikesDetectedVector[] detectedChangepoints = _changePointsDetector.GetChangePoints<DateData>(detectionByColumnName,
+                                                                                                            dataSetForMl,
+                                                                                                            detectMode,
+                                                                                                            confidence,
+                                                                                                            changeHistoryLength,
+                                                                                                            trainingWindowSize,
+                                                                                                            seasonalityWindowSize,
+                                                                                                            errorFunc,
+                                                                                                            martingale,
+                                                                                                            eps)
+                .ToArray();
+
+                var result = new List<ChangePointDetectionDataViewModel>(detectedChangepoints.Length);
+
+                for (var i = 0; i < dataSetForMl.Count; i++) //travers all dataset to find the same values, like detected spikes are, to copy a date 
+                {
+                    double roundUpUnsurness()
+                    {
+                        return detectedChangepoints[i].Prediction[2] < 0.001 || Double.IsNaN(detectedChangepoints[i].Prediction[2])
+                            ? 0
+                            : Math.Round(detectedChangepoints[i].Prediction[2], 3);
+                    }
+                    //The RawScore (2nd Index, [1] is output by SR to determine whether a point is an anomaly or not,
+                    //under AnomalyAndMargin mode, when a point is an anomaly, an AnomalyScore will be calculated according to sensitivity setting.
+                    if (detectedAlertsOnly && detectedChangepoints[i].Prediction[0] != 1)  //1st (0) value in vector means if it is alert, or not (boolean 0,1)
+                        continue;
+                    {
+                        var singleResult = CreateSingleResultMatchedWithSourceDataPoint<ChangePointDetectionDataViewModel>(
+                            sourceDataPoint: dataSetForMl[i],
+                            detectedValue: detectedChangepoints[i].Prediction[1], //
+                            isAlert: (int)detectedChangepoints[i].Prediction[0],  // Alert(0 for no alert, 1 for an alert)
+                            unsurnessOrMag: roundUpUnsurness(),
+                            expectedValue: detectedChangepoints[i].Prediction[3] // not sure if it works for changepoints ?
+                            );
+                        if (singleResult != null)
+                            result.Add(singleResult);
+                    }
+                }
+                return result;
+            });
+        }
+
         private static U? CreateSingleResultMatchedWithSourceDataPoint<U>(DateData sourceDataPoint, double detectedValue, int isAlert, double unsurnessOrMag, double expectedValue) where U : DateIntegerDataViewModel, new()
         {
             switch (new U())
             {
-                //case WeeklyAmountChangePointsWithMissingDataResultDTO changePoints:
-                //    changePoints.Items = items;
-                //    changePoints.Sales = sales;
-                //    changePoints.WeekendDate = weekendDate.ToShortDateString();
-                //    changePoints.IsAlert = isAlert == 1;
-                //    return changePoints as U;
+                case ChangePointDetectionDataViewModel changePoint:
+                    changePoint.ScoreOriginal = detectedValue; //have to be exactly the same like a sourceDataPoint - matching is done before
+                    changePoint.Date = sourceDataPoint.Date;
+                    changePoint.IsAlert = isAlert == 1;
+                    return changePoint as U;
                 case SpikeDetectionDataViewModel spike:
                     spike.ScoreOriginal = detectedValue; //have to be exactly the same like a sourceDataPoint - matching is done before
                     spike.Date = sourceDataPoint.Date;
