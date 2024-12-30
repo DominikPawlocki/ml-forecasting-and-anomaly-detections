@@ -33,14 +33,9 @@ namespace ml_ui.ViewModels
         public int ChangePoints_TrainingWindowSize { get; set; }
         public int ChangePoints_SeasonalityWindowSize { get; set; }
 
-        public IEnumerable<SpikeDetectionDataViewModel>? SpikesDetected
-        {
-            get; set;
-        }
-        public IEnumerable<AnomalyDetectionDataViewModel>? AnomaliesDetected
-        {
-            get; set;
-        }
+        public IEnumerable<SpikeDetectionDataViewModel>? SpikesDetected { get; set; }
+        public IEnumerable<AnomalyDetectionDataViewModel>? AnomaliesDetected { get; set; }
+        public IEnumerable<ChangePointDetectionDataViewModel>? ChangePointsDetected { get; set; }
 
         internal void ClearModelSpikes()
         {
@@ -50,14 +45,19 @@ namespace ml_ui.ViewModels
         {
             AnomaliesDetected = [];
         }
-
+        internal void ClearModelChangePoints()
+        {
+            ChangePointsDetected = [];
+        }
         internal void SetUpDefaults()
         {
             ShowError = false;
             ClearModelSpikes();
             ClearModelAnomalies();
+            ClearModelChangePoints();
             SetDefaultModelParametersAccordingtoDataSetForSpikes();
             SetDefaultModelParametersAccordingtoDataSetForAnomalies();
+            SetDefaultModelParametersAccordingtoDataSetForChangePoints();
         }
 
         private void SetDefaultModelParametersAccordingtoDataSetForSpikes()
@@ -82,6 +82,15 @@ namespace ml_ui.ViewModels
             Anomalies_Period = null; //when setting null, system tries to detect seasonability of data itself.
             Anomalies_Sensitivity = 99; //Sensitivity of boundaries, only useful when srCnnDetectMode is AnomalyAndMargin.
             Anomalies_Threshold = 0.3; //This threshold must  fall between [0,1], and its default value is 0.3
+        }
+
+        private void SetDefaultModelParametersAccordingtoDataSetForChangePoints()
+        {
+            ChangePoints_TrainingWindowSize = Data.Count() / 2;
+            ChangePoints_ChangeHistoryLength = Data.Count() / 4; //most important value determines detections . lower value4s means sensitive detection, bigger values means less sensitive - window is bigger
+            ChangePoints_SeasonalityWindowSize = 2; //2 means no Seasonability in data !
+            ChangePoints_Confidence = 95;
+            ChangePoints_NumericMethod = DetectionMethod.Ssa;
         }
     }
 }

@@ -50,5 +50,11 @@ namespace ml_ui.ViewModels
         public double ExpectedValue { get; set; }
     }
 
+    public class ChangePointDetectionDataViewModel : DateIntegerDataViewModel
+    {
+        public bool IsAlert { get; set; }
+        public double ScoreOriginal { get; set; }
+        public new int Value { get { return (int)ScoreOriginal; } }
 
+    }
 }
